@@ -1,0 +1,24 @@
+GLOBAL_CONFIG:
+    gravity = TRUE
+
+OBJECT_LIST:
+    object1:
+        type = RIGID_CUBE
+        properties = ["", "", "", ""]
+        scale = 1.0
+        position = [0.0, 0.0, 0.0]
+        orientation = [0.0, 0.0, 0.0, 0.0]
+        textureInfo = [1]
+
+    object2:
+        type = SOFTBODY_SPHERE
+        properties = ["", "", "", ""]
+        scale = 1.0
+        position = [0.0, 0.0, 0.0]
+        orientation = [0.0, 0.0, 0.0, 0.0]
+        textureInfo = [2]
+
+
+PLAYER_INFO:
+    position = [0.0, 0.0, 0.0]
+    orientation = [0.0, 0.0, 0.0, 0.0]

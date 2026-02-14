@@ -1,10 +1,10 @@
 from typing import Iterator
 
-from grammar.grammar import Grammar
-from lexer.token import Token
-from parser.ast import AST
-from parser.earley.state import Item, State
-from parser.parsingEngine import ParsingEngine
+from src.grammar.grammar import Grammar
+from src.lexer.token import Token
+from src.parser.ast import AST
+from src.parser.earley.state import Item, State
+from src.parser.parsingEngine import ParsingEngine
 
 
 class Earley(ParsingEngine):

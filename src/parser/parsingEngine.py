@@ -1,6 +1,6 @@
 from typing import Iterator
 
-from lexer.token import Token
+from src.lexer.token import Token
 
 
 class ParsingEngine:

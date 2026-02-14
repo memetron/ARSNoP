@@ -2,10 +2,11 @@
 import io
 import contextlib
 
-from grammar.grammar import Grammar
-from grammar.production import Production
-from parser.shift_reduce.state import lr0_states, lr1_states, _lr1_closure
-from parser.shift_reduce.state import Item
+from src.grammar.grammar import Grammar
+from src.grammar.production import Production
+from src.parser.shift_reduce.generators import LALR, LR1, LALR_Brute_Force
+from src.parser.shift_reduce.state import lr0_states, lr1_states, _lr1_closure
+from src.parser.shift_reduce.state import Item
 
 
 SIMPLE_GRAMMAR_TEXT = "start ::= expr\nexpr ::= TOK"
@@ -60,7 +61,6 @@ class TestEpsilonInLookahead:
             )
 
     def test_lr1_no_epsilon_in_action_table(self):
-        from parser.shift_reduce.generators import LR1
         nullable_grammar = Grammar(self.NULLABLE_GRAMMAR)
         automaton = LR1().generate(nullable_grammar)
         for (state, terminal), action in automaton._action.items():
@@ -69,7 +69,6 @@ class TestEpsilonInLookahead:
             )
 
     def test_lalr_no_epsilon_in_action_table(self):
-        from parser.shift_reduce.generators import LALR
         nullable_grammar = Grammar(self.NULLABLE_GRAMMAR)
         automaton = LALR().generate(nullable_grammar)
         for (state, terminal), action in automaton._action.items():
@@ -78,7 +77,6 @@ class TestEpsilonInLookahead:
             )
 
     def test_lalr_brute_force_no_epsilon_in_action_table(self):
-        from parser.shift_reduce.generators import LALR_Brute_Force
         nullable_grammar = Grammar(self.NULLABLE_GRAMMAR)
         automaton = LALR_Brute_Force().generate(nullable_grammar)
         for (state, terminal), action in automaton._action.items():

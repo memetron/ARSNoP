@@ -1,5 +1,5 @@
-from lexer.token import Token
-from parser.ast import AST
+from src.lexer.token import Token
+from src.parser.ast import AST
 
 
 class Transformer:

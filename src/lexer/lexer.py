@@ -1,6 +1,6 @@
 import re
 
-from lexer.token import Token
+from src.lexer.token import Token
 
 _LEXER_FILE_RE = re.compile(r"(.*)\.IGNORE(.*)", re.DOTALL)
 _TERMINAL_RE = re.compile(r"([A-Z_]+) (.+)")

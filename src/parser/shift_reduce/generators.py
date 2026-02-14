@@ -1,6 +1,6 @@
-from grammar.grammar import Grammar
-from parser.shift_reduce.automaton import Automaton
-from parser.shift_reduce.state import lr0_states, lr1_states, merge_lr1_states, lalr_states
+from src.grammar.grammar import Grammar
+from src.parser.shift_reduce.automaton import Automaton
+from src.parser.shift_reduce.state import lr0_states, lr1_states, merge_lr1_states, lalr_states
 
 
 class Generator:

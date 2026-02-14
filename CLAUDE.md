@@ -13,7 +13,18 @@ ARSNoP (A Roughly Sufficient Number of Parsers) is a pure Python parsing library
 python example/main.py
 ```
 
-There is no build system, package manager config, or test suite.
+There is no build system or package manager config.
+
+## Testing
+
+- A pytest test suite is included in the `tests/` directory.
+- Run the tests from the repository root with:
+
+```bash
+python3 -m pytest tests/ -v
+```
+
+- If `pytest` is not installed, install it with `pip install pytest`.
 
 ## Architecture
 

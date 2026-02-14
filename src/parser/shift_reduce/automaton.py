@@ -1,9 +1,9 @@
 import copy
 from typing import Iterator
 
-from lexer.token import Token
-from parser.ast import AST
-from parser.parsingEngine import ParsingEngine
+from src.lexer.token import Token
+from src.parser.ast import AST
+from src.parser.parsingEngine import ParsingEngine
 
 
 class Automaton(ParsingEngine):

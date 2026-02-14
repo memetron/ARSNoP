@@ -1,6 +1,6 @@
 from pprint import pprint
 
-from parser.parser import from_file
+from src.parser.parser import from_file
 from timformer import Timformer
 
 

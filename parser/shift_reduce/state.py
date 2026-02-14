@@ -1,6 +1,5 @@
 from grammar.grammar import Grammar
 from grammar.production import Production
-from utils import print_states
 
 
 class Item:
@@ -92,7 +91,6 @@ def lr0_states(grammar: Grammar):
                     state_indices[new_state] = len(states)
                     states.append(new_state)
                 transitions[(i, symbol)] = state_indices[new_state]
-    print_states(states)
     return states, transitions
 
 

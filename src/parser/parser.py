@@ -4,7 +4,7 @@ from src.grammar.grammar import Grammar
 from src.lexer.lexer import Lexer
 from src.parser.earley.earley import Earley
 from src.parser.parsingEngine import ParsingEngine
-from src.parser.shift_reduce.generators import Generator, SLR, LALR_Brute_Force, LALR, LR1, LR0
+from src.parser.shift_reduce.generators import SLR, LALR_Brute_Force, LALR, LR1, LR0
 from src.transformer.transformer import Transformer
 
 # Regular expression to extract grammar and terminals from a text file

@@ -10,7 +10,7 @@ ARSNoP (A Roughly Sufficient Number of Parsers) is a pure Python parsing library
 
 ```bash
 # Run the example (TIM format parser)
-python3 -m src.example.main
+uv run -m src.example.main
 ```
 
 There is no build system or package manager config.
@@ -21,7 +21,7 @@ There is no build system or package manager config.
 - Run the tests from the repository root with:
 
 ```bash
-python3 -m pytest test/ -v
+uv run -m pytest test/ -v
 ```
 
 - If `pytest` is not installed, install it with `pip install pytest`.

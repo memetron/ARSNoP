@@ -1,5 +1,5 @@
-from ...grammar.grammar import Grammar
-from ...lexer.token import Token
+from ...grammar import Grammar
+from ...lexer import Token
 from ..ast import AST
 from .state import Item, State
 from ..parsingEngine import ParsingEngine

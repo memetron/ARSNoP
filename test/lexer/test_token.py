@@ -1,5 +1,5 @@
 """Tests for src/lexer/token.py."""
-from src.lexer.token import Token
+from src.lexer import Token
 
 
 class TestToken:

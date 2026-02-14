@@ -1,7 +1,7 @@
 from typing import Any
 
-from ..lexer.token import Token
-from ..parser.ast import AST
+from ..lexer import Token
+from ..parser import AST
 
 
 class Transformer:

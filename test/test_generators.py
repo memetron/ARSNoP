@@ -2,12 +2,11 @@
 import io
 import contextlib
 
-from src.grammar.grammar import Grammar
-from src.grammar.production import Production
-from src.lexer.lexer import Lexer
-from src.parser.shift_reduce.generators import LR0, LR1, SLR, LALR, LALR_Brute_Force
-from src.parser.shift_reduce.state import lr0_states, _lr1_closure
-from src.parser.shift_reduce.state import Item
+from src.grammar import Grammar, Production
+from src.lexer import Lexer
+from src.parser.shift_reduce import LR0, LR1, SLR, LALR, LALR_Brute_Force
+from src.parser.shift_reduce import Item, lr0_states
+from src.parser.shift_reduce.state import _lr1_closure
 
 
 # A minimal grammar: start ::= expr, expr ::= TOK

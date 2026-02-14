@@ -1,5 +1,4 @@
-from ...grammar.grammar import Grammar
-from ...grammar.production import Production
+from ...grammar import Grammar, Production
 
 
 class Item:

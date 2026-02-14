@@ -1,5 +1,5 @@
 """Tests for src/grammar/production.py."""
-from src.grammar.production import Production
+from src.grammar import Production
 
 
 class TestProduction:

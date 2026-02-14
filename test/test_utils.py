@@ -3,8 +3,8 @@ import io
 import contextlib
 
 from src.utils import flatten, print_states
-from src.grammar.production import Production
-from src.parser.shift_reduce.state import Item, State
+from src.grammar import Production
+from src.parser.shift_reduce import Item, State
 
 
 class TestFlatten:

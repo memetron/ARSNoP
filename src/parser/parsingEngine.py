@@ -1,4 +1,4 @@
-from ..lexer.token import Token
+from ..lexer import Token
 from .ast import AST
 
 

@@ -1,9 +1,8 @@
 """Tests for shift-reduce parser generators."""
-from src.grammar.grammar import Grammar
-from src.lexer.lexer import Lexer
-from src.lexer.token import Token
-from src.parser.earley.earley import Earley
-from src.parser.shift_reduce.generators import LR0, LR1, SLR, LALR, LALR_Brute_Force
+from src.grammar import Grammar
+from src.lexer import Lexer, Token
+from src.parser.earley import Earley
+from src.parser.shift_reduce import LR0, LR1, SLR, LALR, LALR_Brute_Force
 
 
 SIMPLE_GRAMMAR_TEXT = "start ::= expr\nexpr ::= TOK"

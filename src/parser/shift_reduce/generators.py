@@ -1,4 +1,4 @@
-from ...grammar.grammar import Grammar
+from ...grammar import Grammar
 from .automaton import Automaton
 from .state import lr0_states, lr1_states, merge_lr1_states, lalr_states
 

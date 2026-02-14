@@ -1,11 +1,11 @@
 import re
 
-from ..grammar.grammar import Grammar
-from ..lexer.lexer import Lexer
-from .earley.earley import Earley
+from ..grammar import Grammar
+from ..lexer import Lexer
+from .earley import Earley
 from .parsingEngine import ParsingEngine
-from .shift_reduce.generators import SLR, LALR_Brute_Force, LALR, LR1, LR0
-from ..transformer.transformer import Transformer
+from .shift_reduce import SLR, LALR_Brute_Force, LALR, LR1, LR0
+from ..transformer import Transformer
 
 # Regular expression to extract grammar and terminals from a text file
 _GRAMMAR_FORMAT = re.compile(r":GRAMMAR(.*):TERMINALS(.*)", re.DOTALL)

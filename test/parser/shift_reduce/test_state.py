@@ -2,11 +2,10 @@
 import io
 import contextlib
 
-from src.grammar.grammar import Grammar
-from src.grammar.production import Production
-from src.parser.shift_reduce.generators import LALR, LR1, LALR_Brute_Force
-from src.parser.shift_reduce.state import lr0_states, lr1_states, _lr1_closure
-from src.parser.shift_reduce.state import Item
+from src.grammar import Grammar, Production
+from src.parser.shift_reduce import LALR, LR1, LALR_Brute_Force
+from src.parser.shift_reduce import Item, lr0_states, lr1_states
+from src.parser.shift_reduce.state import _lr1_closure
 
 
 SIMPLE_GRAMMAR_TEXT = "start ::= expr\nexpr ::= TOK"

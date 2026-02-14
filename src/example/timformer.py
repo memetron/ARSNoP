@@ -1,4 +1,4 @@
-from ..transformer.transformer import Transformer
+from ..transformer import Transformer
 from ..utils import flatten
 
 

@@ -31,7 +31,7 @@ class LR0(Generator):
                     if item.production.lhs == "S'":
                         action[(i, '$')] = ("accept",)
                     else:
-                        for terminal in grammar.terminals:
+                        for terminal in grammar.terminals | {'$'}:
                             action[(i, terminal)] = ("reduce", item.production)
                 elif item.dot < len(item.production.rhs):  # Shift state
                     symbol = item.production.rhs[item.dot]

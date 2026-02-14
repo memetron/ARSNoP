@@ -21,7 +21,7 @@ There is no build system or package manager config.
 - Run the tests from the repository root with:
 
 ```bash
-uv run -m pytest test/ -v
+uv run -m pytest test/ -q
 ```
 
 - If `pytest` is not installed, install it with `pip install pytest`.

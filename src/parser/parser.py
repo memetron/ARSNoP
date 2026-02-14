@@ -10,7 +10,7 @@ from src.transformer.transformer import Transformer
 # Regular expression to extract grammar and terminals from a text file
 _GRAMMAR_FORMAT = re.compile(r":GRAMMAR(.*):TERMINALS(.*)", re.DOTALL)
 
-def from_file(file_path: str, parser="earley", transformer: Transformer = None):
+def from_file(file_path: str, parser="earley", transformer: Transformer | None = None):
     """
     Creates a Parser instance from a grammar definition file.
 
@@ -46,7 +46,10 @@ def from_file(file_path: str, parser="earley", transformer: Transformer = None):
     """
     with open(file_path, 'r') as file:
         text = file.read()
-    grammar, terminals = re.match(_GRAMMAR_FORMAT, text).groups()
+    match = re.match(_GRAMMAR_FORMAT, text)
+    if not match:
+        raise ValueError("Grammar file must contain :GRAMMAR and :TERMINALS sections")
+    grammar, terminals = match.groups()
     grammar = Grammar(grammar)
     lexer = Lexer(terminals)
 
@@ -76,7 +79,7 @@ class Parser:
             Parses the input text and returns the transformed AST or raw AST.
     """
 
-    def __init__(self, lexer: Lexer, parser: ParsingEngine, transformer: Transformer = None):
+    def __init__(self, lexer: Lexer, parser: ParsingEngine, transformer: Transformer | None = None):
         """
         Initializes the Parser instance.
 

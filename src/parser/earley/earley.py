@@ -1,5 +1,3 @@
-from typing import Iterator
-
 from src.grammar.grammar import Grammar
 from src.lexer.token import Token
 from src.parser.ast import AST
@@ -37,7 +35,7 @@ class Earley(ParsingEngine):
                 completed_items = self._states[input_position].successor(lhs)
                 for completed_item in completed_items:
                     if completed_item not in items:
-                        completed_item.matched_by = item
+                        completed_item.completed_by = item
                         items.append(completed_item)
         self._states.append(State(self._grammar, set(items), len(self._states)))
 
@@ -53,7 +51,7 @@ class Earley(ParsingEngine):
                 return item
         return None
 
-    def parse(self, stream: Iterator[Token]) -> AST:
+    def parse(self, stream: list[Token]) -> AST:
         """
         Parses a list of tokens.
         Args:
@@ -83,8 +81,8 @@ def _to_ast(item: Item) -> AST:
         items.append(curr)
         curr = curr.prev_step
     for i, curr in enumerate(items):
-        if isinstance(curr.matched_by, Item):
-            items[i] = _to_ast(curr.matched_by)
+        if curr.completed_by is not None:
+            items[i] = _to_ast(curr.completed_by)
         else:
-            items[i] = AST(curr.matched_by)
+            items[i] = AST(curr.matched_token)
     return AST(item.production.lhs, reversed(items))

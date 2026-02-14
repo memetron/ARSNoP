@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from src.grammar.grammar import Grammar
 from src.grammar.production import Production
 from src.lexer.token import Token
@@ -22,7 +24,7 @@ class State:
         self.index = index
         self.items = _closure(grammar, items, index)
 
-    def successor(self, symbol: str, matched_by: Token = None) -> set['Item']:
+    def successor(self, symbol: str, matched_by: Token | None = None) -> set[Item]:
         """
         Generates a new set of items after transitioning on a given symbol.
         Args:
@@ -36,7 +38,7 @@ class State:
             if not item.is_completed() and item.get_next_symbol() == symbol:
                 new_item = Item(item.production, item.dot + 1, item.input_position)
                 new_item.prev_step = item
-                new_item.matched_by = matched_by
+                new_item.matched_token = matched_by
                 new_items.add(new_item)
         return new_items
 
@@ -52,7 +54,8 @@ class Item:
         dot (int): Position within the production rule that has been matched.
         input_position (int): Index in the input where the rule starts matching.
         prev_step (Item): The previous item that transitioned to this one.
-        matched_by (Token | None): The token or item that matched the most recent symbol.
+        matched_token (Token | None): The terminal token that was scanned at this step.
+        completed_by (Item | None): The completed item that proved a non-terminal at this step.
     """
 
     def __init__(self, production: Production, dot: int, input_position: int):
@@ -66,8 +69,9 @@ class Item:
         self.production = production
         self.dot = dot
         self.input_position = input_position
-        self.prev_step = None
-        self.matched_by = None
+        self.prev_step: Item | None = None
+        self.matched_token: Token | None = None
+        self.completed_by: Item | None = None
 
     def is_completed(self) -> bool:
         """Checks if the production rule has been fully matched."""

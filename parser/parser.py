@@ -17,7 +17,7 @@ def from_file(file_path: str, parser="earley", transformer: Transformer = None):
     Args:
         file_path (str): The path to the grammar definition file.
         parser (str): The parser algorithm to use. Options include:
-                      "earley", "lalr", "lalr_brute_forc", "SLR", "LR1", "LR0".
+                      "earley", "lalr", "lalr_brute_force", "SLR", "LR1", "LR0".
                       Default is "Earley".
         transformer (Transformer, optional): A Transformer instance to transform the resulting AST. Default is None.
 
@@ -54,7 +54,7 @@ def from_file(file_path: str, parser="earley", transformer: Transformer = None):
         generated = Earley(grammar)
     elif parser == "lalr":
         generated = LALR().generate(grammar)
-    elif parser == "lalr_brute_forc":
+    elif parser == "lalr_brute_force":
         generated = LALR_Brute_Force().generate(grammar)
     elif parser == "slr":
         generated = SLR().generate(grammar)

@@ -173,7 +173,8 @@ class LALR(Generator):
                     symbol = item.production.rhs[item.dot]
                     if symbol in grammar.terminals:
                         next_state = transitions.get((i, symbol))
-                        action[(i, symbol)] = ("shift", next_state)
+                        if next_state is not None:
+                            action[(i, symbol)] = ("shift", next_state)
 
             for non_terminal in grammar.non_terminals:
                 next_state = transitions.get((i, non_terminal))

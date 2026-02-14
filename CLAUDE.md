@@ -10,7 +10,7 @@ ARSNoP (A Roughly Sufficient Number of Parsers) is a pure Python parsing library
 
 ```bash
 # Run the example (TIM format parser)
-python example/main.py
+python3 -m src.example.main
 ```
 
 There is no build system or package manager config.

@@ -1,8 +1,7 @@
-from typing import Iterator
-
 from src.lexer.token import Token
+from src.parser.ast import AST
 
 
 class ParsingEngine:
-    def parse(self, stream: Iterator[Token]):
+    def parse(self, stream: list[Token]) -> AST:
         raise NotImplementedError

@@ -1,3 +1,6 @@
+from typing import Any
+
+
 class AST:
     """
     A class to represent a node in an Abstract Syntax Tree (AST).
@@ -15,7 +18,7 @@ class AST:
         """
         if children is None:
             children = []
-        self.content: any = root
+        self.content: Any = root
         self.children: list[AST] = children
 
     def __str__(self):

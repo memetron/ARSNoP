@@ -1,5 +1,4 @@
 import copy
-from typing import Iterator
 
 from src.lexer.token import Token
 from src.parser.ast import AST
@@ -26,18 +25,18 @@ class Automaton(ParsingEngine):
         self._goto = goto
         self._action = action
 
-    def parse(self, symbols: Iterator[Token]) -> AST:
+    def parse(self, stream: list[Token]) -> AST:
         """
         Processes a stream of symbols (tokens) using shift-reduce parsing to construct an AST.
         Args:
-            symbols (List[Token]): A list of tokens to parse.
+            stream (list[Token]): A list of tokens to parse.
         Returns:
             AST: The resulting abstract syntax tree after parsing the input symbols.
         Raises:
             KeyError: If an unexpected token is encountered or an invalid action is specified.
         """
 
-        buffer = symbols + [Token("$", "$")]
+        buffer = stream + [Token("$", "$")]
         stack = [0]
         tree_stack = []
         index = 0
@@ -63,3 +62,5 @@ class Automaton(ParsingEngine):
                 stack.append(self._goto[(stack[-1], prod.lhs)])
             elif action[0] == "accept":
                 return tree_stack[0]
+
+        raise ValueError("Unexpected end of input")

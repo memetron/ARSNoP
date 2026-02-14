@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from src.grammar.grammar import Grammar
 from src.grammar.production import Production
 from src.lexer.token import Token
@@ -22,7 +24,7 @@ class State:
         self.index = index
         self.items = _closure(grammar, items, index)
 
-    def successor(self, symbol: str, matched_by: Token = None) -> set['Item']:
+    def successor(self, symbol: str, matched_by: Token | None = None) -> set[Item]:
         """
         Generates a new set of items after transitioning on a given symbol.
         Args:
@@ -66,8 +68,8 @@ class Item:
         self.production = production
         self.dot = dot
         self.input_position = input_position
-        self.prev_step = None
-        self.matched_by = None
+        self.prev_step: Item | None = None
+        self.matched_by: Token | Item | None = None
 
     def is_completed(self) -> bool:
         """Checks if the production rule has been fully matched."""

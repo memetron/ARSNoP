@@ -31,7 +31,10 @@ class Lexer:
                 "<STANDARD_TERMINALS>.EXACT<EXACT_TERMINALS>.IGNORE<IGNORED_TERMINALS>"
         """
         self.terminals = {}
-        terminals, ignored = re.match(_LEXER_FILE_RE, terminals).groups()
+        match = re.match(_LEXER_FILE_RE, terminals)
+        if not match:
+            raise ValueError("Terminal definitions must contain a .IGNORE section")
+        terminals, ignored = match.groups()
         self.ignored = ignored.split('\n')
 
         lines = terminals.split('\n')
@@ -51,27 +54,27 @@ class Lexer:
         Raises:
             Exception: If no matching terminal is found for a portion of the input text.
         """
-        l = 0
+        pos = 0
         sequence = []
         line_number = 1
         column_number = 1
 
-        while l < len(text):
+        while pos < len(text):
             longest = ""
             token = ""
             for terminal, regex in self.terminals.items():
-                match = regex.match(text[l:])
+                match = regex.match(text[pos:])
                 if match:
                     if len(match.group()) > len(longest):
                         longest = match.group()
                         token = terminal
             if len(longest) == 0:
                 raise Exception(
-                    f"Unable to lex file at index {l} (line {line_number}, column {column_number})"
+                    f"Unable to lex file at index {pos} (line {line_number}, column {column_number})"
                 )
             else:
                 sequence.append(Token(token, longest))
-                l += len(longest)
+                pos += len(longest)
                 for char in longest:
                     if char == '\n':
                         line_number += 1
@@ -79,4 +82,4 @@ class Lexer:
                     else:
                         column_number += 1
 
-        return list(filter(lambda l: l.token not in self.ignored, sequence))
+        return list(filter(lambda t: t.token not in self.ignored, sequence))

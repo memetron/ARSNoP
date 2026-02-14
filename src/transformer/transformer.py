@@ -1,3 +1,5 @@
+from typing import Any
+
 from src.lexer.token import Token
 from src.parser.ast import AST
 
@@ -11,7 +13,7 @@ class Transformer:
         transform(root: AST):
             Transforms the AST starting from the root node.
     """
-    def transform(self, root: AST) -> any:
+    def transform(self, root: AST) -> Any:
         """
         Transforms an AST starting from its root node.
         Args:

@@ -1,5 +1,3 @@
-from typing import Iterator
-
 from src.grammar.grammar import Grammar
 from src.lexer.token import Token
 from src.parser.ast import AST
@@ -53,7 +51,7 @@ class Earley(ParsingEngine):
                 return item
         return None
 
-    def parse(self, stream: Iterator[Token]) -> AST:
+    def parse(self, stream: list[Token]) -> AST:
         """
         Parses a list of tokens.
         Args:

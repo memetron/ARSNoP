@@ -249,6 +249,8 @@ def _lr1_closure(grammar: Grammar, items: list[Item]) -> list[Item]:
                     else:
                         first_set.update(item.lookahead)
 
+                    first_set.discard('')
+
                     for new_prod in grammar.lookup_productions(symbol):
                         new_item = Item(new_prod, 0, frozenset(first_set))
                         if new_item not in closure_set:

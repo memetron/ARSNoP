@@ -1,8 +1,8 @@
 import copy
 
-from src.lexer.token import Token
-from src.parser.ast import AST
-from src.parser.parsingEngine import ParsingEngine
+from ...lexer.token import Token
+from ..ast import AST
+from ..parsingEngine import ParsingEngine
 
 
 class Automaton(ParsingEngine):

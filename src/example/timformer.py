@@ -1,5 +1,5 @@
-from src.transformer.transformer import Transformer
-from src.utils import flatten
+from ..transformer.transformer import Transformer
+from ..utils import flatten
 
 
 class Timformer(Transformer):

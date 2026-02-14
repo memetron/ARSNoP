@@ -1,7 +1,7 @@
 import re
 import functools
 
-from src.grammar.production import Production
+from .production import Production
 
 _RULE_REGEX = re.compile(r"^(.+)::=(.+)$")
 

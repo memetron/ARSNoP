@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from src.grammar.grammar import Grammar
-from src.grammar.production import Production
-from src.lexer.token import Token
+from ...grammar.grammar import Grammar
+from ...grammar.production import Production
+from ...lexer.token import Token
 
 
 class State:

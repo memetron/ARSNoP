@@ -1,15 +1,45 @@
-"""Tests for shift-reduce state construction (bug regressions)."""
+"""Tests for shift-reduce state construction."""
 import io
 import contextlib
 
 from grammar.grammar import Grammar
 from grammar.production import Production
-from parser.shift_reduce.state import lr0_states, _lr1_closure
+from parser.shift_reduce.state import lr0_states, lr1_states, _lr1_closure
 from parser.shift_reduce.state import Item
 
 
 SIMPLE_GRAMMAR_TEXT = "start ::= expr\nexpr ::= TOK"
 
+
+# ===================================================================
+# State construction correctness
+# ===================================================================
+
+class TestStateConstruction:
+    def test_lr0_states_count(self):
+        grammar = Grammar(SIMPLE_GRAMMAR_TEXT)
+        states, transitions = lr0_states(grammar)
+        # S' -> .start, start -> .expr, expr -> .TOK  (state 0)
+        # plus one state per symbol shift: start, expr, TOK
+        assert len(states) == 4
+
+    def test_lr0_transitions_exist(self):
+        grammar = Grammar(SIMPLE_GRAMMAR_TEXT)
+        _, transitions = lr0_states(grammar)
+        state0_symbols = {sym for (s, sym) in transitions if s == 0}
+        assert "start" in state0_symbols
+        assert "expr" in state0_symbols
+        assert "TOK" in state0_symbols
+
+    def test_lr1_states_count(self):
+        grammar = Grammar(SIMPLE_GRAMMAR_TEXT)
+        states, transitions = lr1_states(grammar)
+        assert len(states) == 4
+
+
+# ===================================================================
+# Bug regressions
+# ===================================================================
 
 class TestEpsilonInLookahead:
     """Bug: _lr1_closure leaks epsilon ('') into lookahead sets."""

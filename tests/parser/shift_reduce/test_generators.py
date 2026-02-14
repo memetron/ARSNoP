@@ -1,11 +1,22 @@
-"""Tests for shift-reduce parser generators (bug regressions)."""
+"""Tests for shift-reduce parser generators."""
 from grammar.grammar import Grammar
 from lexer.lexer import Lexer
+from lexer.token import Token
+from parser.earley.earley import Earley
 from parser.shift_reduce.generators import LR0, LR1, SLR, LALR, LALR_Brute_Force
 
 
 SIMPLE_GRAMMAR_TEXT = "start ::= expr\nexpr ::= TOK"
 SIMPLE_TERMINALS_TEXT = "TOK a\nSPC [ ]\n.IGNORE\nSPC"
+
+NESTED_GRAMMAR_TEXT = (
+    "start ::= list\n"
+    "list ::= LP items RP\n"
+    "items ::= ITEM SEP items | ITEM"
+)
+NESTED_TERMINALS_TEXT = "LP \\(\nRP \\)\nSEP ,\nITEM [a-z]+\nSPC [ ]\n.IGNORE\nSPC"
+
+ALL_GENERATORS = [SLR, LR1, LALR, LALR_Brute_Force]
 
 
 def _parse_with(generator_cls, grammar_text, terminals_text, input_text):
@@ -15,6 +26,121 @@ def _parse_with(generator_cls, grammar_text, terminals_text, input_text):
     tokens = lexer.lex(input_text)
     return automaton.parse(tokens)
 
+
+def _collect_leaves(ast):
+    if not ast.children:
+        if isinstance(ast.content, Token):
+            return [ast.content.lexeme]
+        return [str(ast.content)]
+    leaves = []
+    for child in ast.children:
+        leaves.extend(_collect_leaves(child))
+    return leaves
+
+
+# ===================================================================
+# Per-generator correctness
+# ===================================================================
+
+class TestSLRGenerator:
+    def test_parse_simple(self):
+        ast = _parse_with(SLR, SIMPLE_GRAMMAR_TEXT, SIMPLE_TERMINALS_TEXT, "a")
+        assert ast is not None
+        assert _collect_leaves(ast) == ["a"]
+
+    def test_parse_nested(self):
+        ast = _parse_with(SLR, NESTED_GRAMMAR_TEXT, NESTED_TERMINALS_TEXT, "(foo,bar)")
+        assert ast is not None
+        assert _collect_leaves(ast) == ["(", "foo", ",", "bar", ")"]
+
+    def test_ast_structure(self):
+        ast = _parse_with(SLR, SIMPLE_GRAMMAR_TEXT, SIMPLE_TERMINALS_TEXT, "a")
+        assert ast.content == "start"
+        assert len(ast.children) == 1
+        assert ast.children[0].content == "expr"
+
+
+class TestLR1Generator:
+    def test_parse_simple(self):
+        ast = _parse_with(LR1, SIMPLE_GRAMMAR_TEXT, SIMPLE_TERMINALS_TEXT, "a")
+        assert ast is not None
+        assert _collect_leaves(ast) == ["a"]
+
+    def test_parse_nested(self):
+        ast = _parse_with(LR1, NESTED_GRAMMAR_TEXT, NESTED_TERMINALS_TEXT, "(foo,bar)")
+        assert ast is not None
+        assert _collect_leaves(ast) == ["(", "foo", ",", "bar", ")"]
+
+    def test_ast_structure(self):
+        ast = _parse_with(LR1, SIMPLE_GRAMMAR_TEXT, SIMPLE_TERMINALS_TEXT, "a")
+        assert ast.content == "start"
+        assert len(ast.children) == 1
+        assert ast.children[0].content == "expr"
+
+
+class TestLALRGenerator:
+    def test_parse_simple(self):
+        ast = _parse_with(LALR, SIMPLE_GRAMMAR_TEXT, SIMPLE_TERMINALS_TEXT, "a")
+        assert ast is not None
+        assert _collect_leaves(ast) == ["a"]
+
+    def test_parse_nested(self):
+        ast = _parse_with(LALR, NESTED_GRAMMAR_TEXT, NESTED_TERMINALS_TEXT, "(foo,bar)")
+        assert ast is not None
+        assert _collect_leaves(ast) == ["(", "foo", ",", "bar", ")"]
+
+    def test_ast_structure(self):
+        ast = _parse_with(LALR, SIMPLE_GRAMMAR_TEXT, SIMPLE_TERMINALS_TEXT, "a")
+        assert ast.content == "start"
+        assert len(ast.children) == 1
+        assert ast.children[0].content == "expr"
+
+
+class TestLALRBruteForceGenerator:
+    def test_parse_simple(self):
+        ast = _parse_with(LALR_Brute_Force, SIMPLE_GRAMMAR_TEXT, SIMPLE_TERMINALS_TEXT, "a")
+        assert ast is not None
+        assert _collect_leaves(ast) == ["a"]
+
+    def test_parse_nested(self):
+        ast = _parse_with(LALR_Brute_Force, NESTED_GRAMMAR_TEXT, NESTED_TERMINALS_TEXT, "(foo,bar)")
+        assert ast is not None
+        assert _collect_leaves(ast) == ["(", "foo", ",", "bar", ")"]
+
+    def test_ast_structure(self):
+        ast = _parse_with(LALR_Brute_Force, SIMPLE_GRAMMAR_TEXT, SIMPLE_TERMINALS_TEXT, "a")
+        assert ast.content == "start"
+        assert len(ast.children) == 1
+        assert ast.children[0].content == "expr"
+
+
+class TestGeneratorConsistency:
+    def test_all_generators_agree_on_leaves(self):
+        input_text = "(foo,bar,baz)"
+        results = {}
+        for gen_cls in ALL_GENERATORS:
+            ast = _parse_with(gen_cls, NESTED_GRAMMAR_TEXT, NESTED_TERMINALS_TEXT, input_text)
+            results[gen_cls.__name__] = _collect_leaves(ast)
+
+        values = list(results.values())
+        for name, leaves in results.items():
+            assert leaves == values[0], (
+                f"{name} produced different leaves: {leaves} vs {values[0]}"
+            )
+
+    def test_earley_agrees_with_shift_reduce(self):
+        input_text = "(foo,bar)"
+        grammar = Grammar(NESTED_GRAMMAR_TEXT)
+        lexer = Lexer(NESTED_TERMINALS_TEXT)
+
+        earley_ast = Earley(grammar).parse(lexer.lex(input_text))
+        slr_ast = _parse_with(SLR, NESTED_GRAMMAR_TEXT, NESTED_TERMINALS_TEXT, input_text)
+        assert _collect_leaves(earley_ast) == _collect_leaves(slr_ast)
+
+
+# ===================================================================
+# Bug regressions
+# ===================================================================
 
 class TestLR0MissingDollarReduce:
     """Bug: LR0 omits reduce actions for '$', causing KeyError at end-of-input."""

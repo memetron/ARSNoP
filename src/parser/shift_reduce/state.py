@@ -1,5 +1,5 @@
-from src.grammar.grammar import Grammar
-from src.grammar.production import Production
+from ...grammar.grammar import Grammar
+from ...grammar.production import Production
 
 
 class Item:

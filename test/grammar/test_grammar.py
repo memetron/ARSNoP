@@ -1,6 +1,4 @@
 """Tests for src/grammar/grammar.py."""
-import pytest
-
 from src.grammar.grammar import Grammar
 
 

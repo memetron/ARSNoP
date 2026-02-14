@@ -17,11 +17,11 @@ There is no build system or package manager config.
 
 ## Testing
 
-- A pytest test suite is included in the `tests/` directory.
+- A pytest test suite is included in the `test/` directory.
 - Run the tests from the repository root with:
 
 ```bash
-python3 -m pytest tests/ -v
+python3 -m pytest test/ -v
 ```
 
 - If `pytest` is not installed, install it with `pip install pytest`.

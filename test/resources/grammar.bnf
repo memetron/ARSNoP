@@ -1,0 +1,23 @@
+:GRAMMAR
+start ::= sentence
+sentence ::= clause | clause CONJ sentence
+clause ::= object action | object action object | object action phrase | object action object phrase
+object ::= noun | noun CONJ object
+noun ::= NOUN | adj NOUN | ART NOUN | ART adj NOUN
+adj ::= ADJ | ADJ adj
+action ::= verb | verb CONJ verb
+verb ::= VERB | adv VERB | VERB adv
+adv ::= ADV | adv CONJ adv
+phrase ::= PREP object
+
+:TERMINALS
+CONJ and
+NOUN fox|dog
+ART the|an|a
+ADJ quick|brown|lazy
+VERB jumped
+PREP over
+ADV quickly
+SPC [ ]
+.IGNORE
+SPC

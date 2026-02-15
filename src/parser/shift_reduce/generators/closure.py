@@ -14,7 +14,7 @@ type LookaheadFn = Callable[[Item, Grammar], frozenset[str]]
 def closure_step(
     closure: frozenset[Item],
     grammar: Grammar,
-    compute_lookahead: LookaheadFn
+    lookaheadFn: LookaheadFn
 ) -> frozenset[Item]:
     new_items = set(closure)
     for item in closure:
@@ -23,5 +23,5 @@ def closure_step(
         symbol = item.production.rhs[item.dot]
         if symbol in grammar.non_terminals:
             for new_prod in grammar.lookup_productions(symbol):
-                new_items.add(Item(new_prod, 0, compute_lookahead(item, grammar)))
+                new_items.add(Item(new_prod, 0, lookaheadFn(item, grammar)))
     return frozenset(new_items)

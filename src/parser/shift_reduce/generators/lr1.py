@@ -3,11 +3,14 @@ from typing import Iterable
 
 from .closure import closure_step
 from ....grammar import Grammar, Production
-from ..automaton import Automaton
 from ..generators.generator import Generator
 from ..state import Item, State
-from ..types import GotoTable, ActionTable
+from ..types import GotoTable
 
+
+class LR1(Generator):
+    def _build_states(self, grammar: Grammar):
+        return lr1_states(grammar)
 
 def lr1_states(grammar: Grammar) -> tuple[list[State], GotoTable]:
     """
@@ -63,37 +66,3 @@ def _lr1_successor(grammar: Grammar, items: list[Item], symbol: str) -> frozense
             if item.dot < len(item.production.rhs) and item.production.rhs[item.dot] == symbol
         ]
     )
-
-
-class LR1(Generator):
-    """
-    Class for generating LR(1) parsing tables.
-    Methods:
-        generate(grammar: Grammar): Generates LR(1) automaton.
-    """
-    def generate(self, grammar: Grammar) -> Automaton:
-        goto: GotoTable = {}
-        action: ActionTable = {}
-        states, transitions = lr1_states(grammar)
-
-        for i, state in enumerate(states):
-            for item in state.items:
-                if item.dot == len(item.production.rhs):  # Reduce or Accept state
-                    if item.production.lhs == "S'":
-                        action[(i, '$')] = ("accept",)
-                    else:
-                        for terminal in item.lookahead:
-                            action[(i, terminal)] = ("reduce", item.production)
-                elif item.dot < len(item.production.rhs):  # Shift state
-                    symbol = item.production.rhs[item.dot]
-                    if symbol in grammar.terminals:
-                        next_state = transitions.get((i, symbol))
-                        if next_state is not None:
-                            action[(i, symbol)] = ("shift", next_state)
-
-            for non_terminal in grammar.non_terminals:
-                next_state = transitions.get((i, non_terminal))
-                if next_state is not None:
-                    goto[(i, non_terminal)] = next_state
-
-        return Automaton(goto, action)

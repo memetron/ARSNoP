@@ -6,25 +6,24 @@ from .util import fixed_point
 
 from .closure import closure_step
 from ....grammar import Grammar, Production
-from ..automaton import Automaton
 from ..generators.generator import Generator
 from .lr0 import lr0_states
 from .lr1 import _lr1_closure # type: ignore
 from ..state import Item, State
 from ..types import (
-    ActionTable,
     GotoTable,
     KernelItem,
     LookaheadTable,
     PropagationGraph,
 )
 
-def lalr_states(grammar: Grammar) -> tuple[list[State], GotoTable]:
-    states, transitions = lr0_states(grammar)
-    lookaheads, propagation = _init_lalr_tables(states, grammar)
-    _discover_lookaheads(states, transitions, grammar, lookaheads, propagation)
-    lookaheads = _propagate_lookaheads(lookaheads, propagation)
-    return _build_lalr_states(states, transitions, grammar, lookaheads)
+class LALR(Generator):
+    def _build_states(self, grammar: Grammar):
+        states, transitions = lr0_states(grammar)
+        lookaheads, propagation = _init_lalr_tables(states, grammar)
+        _discover_lookaheads(states, transitions, grammar, lookaheads, propagation)
+        lookaheads = _propagate_lookaheads(lookaheads, propagation)
+        return _build_lalr_states(states, transitions, grammar, lookaheads)
 
 def _init_lalr_tables(
     states: list[State],
@@ -125,31 +124,3 @@ def _build_lalr_states(
         lalr.append(State(_lr1_closure(grammar, items)))
 
     return lalr, transitions
-
-class LALR(Generator):
-    def generate(self, grammar: Grammar) -> Automaton:
-        goto: GotoTable = {}
-        action: ActionTable = {}
-        states, transitions = lalr_states(grammar)
-
-        for i, state in enumerate(states):
-            for item in state.items:
-                if item.dot == len(item.production.rhs):
-                    if item.production.lhs == "S'":
-                        action[(i, '$')] = ("accept",)
-                    else:
-                        for terminal in item.lookahead:
-                            action[(i, terminal)] = ("reduce", item.production)
-                elif item.dot < len(item.production.rhs):
-                    symbol = item.production.rhs[item.dot]
-                    if symbol in grammar.terminals:
-                        next_state = transitions.get((i, symbol))
-                        if next_state is not None:
-                            action[(i, symbol)] = ("shift", next_state)
-
-            for non_terminal in grammar.non_terminals:
-                next_state = transitions.get((i, non_terminal))
-                if next_state is not None:
-                    goto[(i, non_terminal)] = next_state
-
-        return Automaton(goto, action)

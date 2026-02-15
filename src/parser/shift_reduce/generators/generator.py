@@ -86,10 +86,8 @@ def _shift_actions(
     item: Item,
 ) -> Iterable[ActionEntry]:
     symbol = item.production.rhs[item.dot]
-
     if symbol not in grammar.terminals:
         return
-
     next_state = transitions.get((state_index, symbol))
     if next_state is not None:
         yield ((state_index, symbol), ("shift", next_state))
@@ -103,6 +101,5 @@ def _reduce_or_accept_actions(
     if item.production.lhs == "S'":
         yield ((state_index, '$'), ("accept",))
         return
-
     for terminal in lookaheads:
         yield ((state_index, terminal), ("reduce", item.production))

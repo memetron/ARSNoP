@@ -32,6 +32,10 @@ class Item:
 
     def __repr__(self) -> str:
         return f"Item({self.production}, dot={self.dot}, lookahead={{{', '.join(self.lookahead)}}})"
+    
+    def is_complete(self) -> bool:
+        """Checks if the item is complete (dot at the end of the production)."""
+        return self.dot == len(self.production.rhs)
 
 
 class State:

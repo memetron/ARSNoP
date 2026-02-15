@@ -16,5 +16,13 @@ class Production:
         self.lhs = lhs
         self.rhs = rhs
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Production):
+            return NotImplemented
+        return self.lhs == other.lhs and self.rhs == other.rhs
+
+    def __hash__(self) -> int:
+        return hash((self.lhs, tuple(self.rhs)))
+
     def __str__(self) -> str:
         return f"{self.lhs} ::= {' '.join(self.rhs)}"

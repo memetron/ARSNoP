@@ -242,3 +242,6 @@ cython_debug/
 #.idea/
 
 .claude/memory/MEMORY.md
+web/.vite/**
+web/dist/**
+web/node_modules/**

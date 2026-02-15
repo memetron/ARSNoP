@@ -6,7 +6,7 @@ from src.grammar import Grammar, Production
 from src.lexer import Lexer
 from src.parser.shift_reduce import LR0, LR1, SLR, LALR, LALR_Brute_Force
 from src.parser.shift_reduce import Item, lr0_states
-from src.parser.shift_reduce.state import _lr1_closure
+from src.parser.shift_reduce.lr1 import _lr1_closure
 
 
 # A minimal grammar: start ::= expr, expr ::= TOK

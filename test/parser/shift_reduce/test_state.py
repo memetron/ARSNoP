@@ -5,7 +5,7 @@ import contextlib
 from src.grammar import Grammar, Production
 from src.parser.shift_reduce import LALR, LR1, LALR_Brute_Force
 from src.parser.shift_reduce import Item, lr0_states, lr1_states
-from src.parser.shift_reduce.state import _lr1_closure
+from src.parser.shift_reduce.lr1 import _lr1_closure
 
 
 SIMPLE_GRAMMAR_TEXT = "start ::= expr\nexpr ::= TOK"

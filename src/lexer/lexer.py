@@ -19,7 +19,7 @@ class Lexer:
             Tokenizes the input text based on the defined terminals and returns a list of tokens.
     """
 
-    def __init__(self, terminals: str):
+    def __init__(self, terminals: str) -> None:
         """
         Initializes the Lexer with terminal definitions.
 
@@ -30,12 +30,12 @@ class Lexer:
             terminals (str): A string containing terminal definitions in the format:
                 "<STANDARD_TERMINALS>.EXACT<EXACT_TERMINALS>.IGNORE<IGNORED_TERMINALS>"
         """
-        self.terminals = {}
+        self.terminals: dict[str, re.Pattern[str]] = {}
         match = re.match(_LEXER_FILE_RE, terminals)
         if not match:
             raise ValueError("Terminal definitions must contain a .IGNORE section")
         terminals, ignored = match.groups()
-        self.ignored = ignored.split('\n')
+        self.ignored: list[str] = ignored.split('\n')
 
         lines = terminals.split('\n')
         for line in lines:

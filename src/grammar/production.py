@@ -6,7 +6,7 @@ class Production:
         rhs (list[str]): The right-hand side of the production rule, which is a list of symbols (terminals or non-terminals).
     """
 
-    def __init__(self, lhs: str, rhs: list[str]):
+    def __init__(self, lhs: str, rhs: list[str]) -> None:
         """
         Initializes a production rule with a left-hand side and a right-hand side.
         Args:

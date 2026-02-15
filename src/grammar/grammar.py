@@ -36,7 +36,7 @@ class Grammar:
     productions: list[Production]
     start_symbol: str
 
-    def __init__(self, text, start_symbol="start"):
+    def __init__(self, text: str, start_symbol: str = "start") -> None:
         """
         Initializes the Grammar object.
         Args:
@@ -64,7 +64,7 @@ class Grammar:
         self.terminals -= self.non_terminals
 
     @functools.cache
-    def lookup_productions(self, non_terminal: str):
+    def lookup_productions(self, non_terminal: str) -> list[Production]:
         """
         Retrieves the productions for a given non-terminal.
         Args:
@@ -83,7 +83,7 @@ class Grammar:
         Returns:
             bool: True if the non-terminal can derive ε, otherwise False.
         """
-        return [] in self.lookup_productions(non_terminal)
+        return any(p.rhs == [] for p in self.lookup_productions(non_terminal))
 
     def first(self, symbol: str) -> set[str]:
         """
@@ -97,7 +97,7 @@ class Grammar:
         return self._first_dict()[symbol]
 
     @functools.cache
-    def _first_dict(self):
+    def _first_dict(self) -> dict[str, set[str]]:
         first_sets = {s: set() for s in self.terminals.union(self.non_terminals)}
         for terminal in self.terminals:
             first_sets[terminal].add(terminal)
@@ -133,7 +133,7 @@ class Grammar:
         return self._follow_dict()[symbol]
 
     @functools.cache
-    def _follow_dict(self):
+    def _follow_dict(self) -> dict[str, set[str]]:
         follow_sets = {nt: set() for nt in self.non_terminals}
         follow_sets[self.start_symbol].add('$')
         while True:

@@ -8,6 +8,7 @@ type ShiftAction = tuple[Literal["shift"], int]
 type ReduceAction = tuple[Literal["reduce"], Production]
 type AcceptAction = tuple[Literal["accept"]]
 type Action = ShiftAction | ReduceAction | AcceptAction
+type ActionEntry = tuple[tuple[int, str], Action]
 type ActionTable = dict[tuple[int, str], Action]
 type Kernel = frozenset[tuple[Production, int]]
 type StateIndex = int

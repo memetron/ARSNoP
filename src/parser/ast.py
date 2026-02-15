@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any
+
+from ..lexer import Token
 
 
 class AST:
@@ -12,14 +13,14 @@ class AST:
         children (list): A list of child nodes.
     """
 
-    def __init__(self, root: Any, children: Iterable[AST] | None = None) -> None:
+    def __init__(self, root: Token | str, children: Iterable[AST] | None = None) -> None:
         """
         Initializes an ASTNode with a root value and its children.
         Args:
             root: The value or label of the node.
             children (list, optional): A list of child nodes. Defaults to an empty list if not provided.
         """
-        self.content: Any = root
+        self.content: Token | str = root
         self.children: list[AST] = list(children) if children is not None else []
 
     def __str__(self) -> str:

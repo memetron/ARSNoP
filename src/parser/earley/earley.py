@@ -1,5 +1,3 @@
-from typing import Any
-
 from ...grammar import Grammar
 from ...lexer import Token
 from ..ast import AST
@@ -77,14 +75,15 @@ def _to_ast(item: Item) -> AST:
     Returns:
         AST: The constructed abstract syntax tree.
     """
-    items: list[Any] = []
+    raw_items: list[Item] = []
     curr: Item = item
     while curr.prev_step:
-        items.append(curr)
+        raw_items.append(curr)
         curr = curr.prev_step
-    for i, curr_item in enumerate(items):
+    children: list[AST] = []
+    for curr_item in raw_items:
         if curr_item.completed_by is not None:
-            items[i] = _to_ast(curr_item.completed_by)
-        else:
-            items[i] = AST(curr_item.matched_token)
-    return AST(item.production.lhs, list(reversed(items)))
+            children.append(_to_ast(curr_item.completed_by))
+        elif curr_item.matched_token is not None:
+            children.append(AST(curr_item.matched_token))
+    return AST(item.production.lhs, list(reversed(children)))

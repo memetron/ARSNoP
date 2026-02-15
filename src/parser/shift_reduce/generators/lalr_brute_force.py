@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+from .closure import augmented_start, build_states, lr1_closure
 from ....grammar.production import Production
 from ....grammar import Grammar
 from ..generators.generator import Generator
-from .lr1 import _lr1_closure, lr1_states # type: ignore
 from ..state import Item, State
 from ..types import GotoTable, Kernel
 
 class LALR_Brute_Force(Generator):
     def _build_states(self, grammar: Grammar):
-        states, transitions = lr1_states(grammar)
+        states, transitions = build_states(
+            grammar,
+            [Item(augmented_start(grammar), 0, frozenset({"$"}))],
+            lr1_closure,
+        )
         kernel_map: dict[Kernel, list[int]] = {}
         for idx, state in enumerate(states):
             kernel = state.get_kernel()
@@ -35,13 +39,13 @@ class LALR_Brute_Force(Generator):
         return merged_states, merged_transitions
 
 def _merge_state(state: State, other: State, grammar: Grammar) -> State:
-        """Merges two states by unioning lookaheads for identical kernel items and recomputing closure."""
-        merged_items_dict: dict[tuple[Production, int], frozenset[str]] = {}
-        for item in state.items.union(other.items):
-            key = (item.production, item.dot)
-            if key in merged_items_dict:
-                merged_items_dict[key] = merged_items_dict[key].union(item.lookahead)
-            else:
-                merged_items_dict[key] = item.lookahead
-        merged_items = [Item(prod, dot, la) for (prod, dot), la in merged_items_dict.items()]
-        return State(_lr1_closure(grammar, merged_items))
+    """Merges two states by unioning lookaheads for identical kernel items and recomputing closure."""
+    merged_items_dict: dict[tuple[Production, int], frozenset[str]] = {}
+    for item in state.items.union(other.items):
+        key = (item.production, item.dot)
+        if key in merged_items_dict:
+            merged_items_dict[key] = merged_items_dict[key].union(item.lookahead)
+        else:
+            merged_items_dict[key] = item.lookahead
+    merged_items = [Item(prod, dot, la) for (prod, dot), la in merged_items_dict.items()]
+    return State(lr1_closure(grammar, merged_items))

@@ -1,7 +1,7 @@
 """Tests for the LR(1) generator."""
 from src.grammar import Grammar, Production
 from src.parser.shift_reduce import LR1, Item
-from src.parser.shift_reduce.generators.lr1 import _lr1_closure
+from src.parser.shift_reduce.generators.closure import lr1_closure
 
 from .conftest import (
     SIMPLE_GRAMMAR_TEXT,
@@ -39,7 +39,7 @@ class TestEpsilonInLookahead:
         """LR1 closure should never produce items with '' in their lookahead."""
         grammar = Grammar(NULLABLE_GRAMMAR_TEXT)
         start_prod = Production("S'", [grammar.start_symbol])
-        items = _lr1_closure(
+        items = lr1_closure(
             grammar,
             [Item(start_prod, 0, frozenset({"$"}))]
         )

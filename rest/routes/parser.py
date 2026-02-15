@@ -14,7 +14,6 @@ from ..serializers import (
     serialize_state,
     serialize_action_table,
     serialize_goto_table,
-    serialize_token,
 )
 from ..tracer import traced_parse
 

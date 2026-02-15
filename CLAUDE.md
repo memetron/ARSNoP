@@ -92,7 +92,7 @@ An interactive web app for visualizing parser tables and step-by-step parse exec
 make dev
 
 # Or start them individually:
-make api   # Flask REST API on http://localhost:5000
+make api   # Flask REST API on http://localhost:5001
 make web   # Vite dev server on http://localhost:5173 (proxies /api to Flask)
 
 # Install frontend dependencies (first time only)

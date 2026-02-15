@@ -3,7 +3,7 @@
 # Start both the Flask API and Vite dev server
 dev: api web
 
-# Start the Flask REST API on port 5000
+# Start the Flask REST API on port 5001
 api:
 	uv run python -m rest.app &
 

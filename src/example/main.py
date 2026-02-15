@@ -4,7 +4,7 @@ from ..parser import from_file
 from .timformer import Timformer
 
 
-def main():
+def main() -> None:
     earley = from_file('src/resources/grammar.bnf', parser="earley", transformer=Timformer())
     with open('src/resources/text.tim', 'r') as file:
         text = file.read()

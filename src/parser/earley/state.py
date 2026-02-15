@@ -32,7 +32,7 @@ class State:
         Returns:
             set[Item]: A set of items waiting on the given symbol.
         """
-        new_items = set()
+        new_items: set[Item] = set()
         for item in self.items:
             if not item.is_completed() and item.get_next_symbol() == symbol:
                 new_item = Item(item.production, item.dot + 1, item.input_position)

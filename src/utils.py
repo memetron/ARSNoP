@@ -1,10 +1,21 @@
-def flatten(arr):
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from .parser.shift_reduce.state import State
+
+
+def flatten(arr: Any) -> list[Any]:
     if isinstance(arr, list):
-        return [item for sublist in arr for item in flatten(sublist)]
+        result: list[Any] = []
+        for sublist in cast(list[Any], arr):
+            result.extend(flatten(sublist))
+        return result
     return [arr]
 
 
-def print_states(states):
+def print_states(states: list[State]) -> None:
     for index, state in enumerate(states):
         print(f"STATE_{index}:")
         for item in state.items:

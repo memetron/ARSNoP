@@ -55,7 +55,7 @@ class Lexer:
             Exception: If no matching terminal is found for a portion of the input text.
         """
         pos = 0
-        sequence = []
+        sequence: list[Token] = []
         line_number = 1
         column_number = 1
 

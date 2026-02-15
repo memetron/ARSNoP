@@ -38,8 +38,8 @@ class Automaton(ParsingEngine):
         """
 
         buffer = stream + [Token("$", "$")]
-        stack = [0]
-        tree_stack = []
+        stack: list[int] = [0]
+        tree_stack: list[AST] = []
         index = 0
 
         while index < len(buffer):
@@ -55,7 +55,7 @@ class Automaton(ParsingEngine):
             elif action[0] == "reduce":
                 # reduce by popping |rhs| symbols from the stack and merge an equivalent number of ast nodes
                 prod = action[1]
-                children = []
+                children: list[AST] = []
                 for _ in prod.rhs:
                     stack.pop()
                     children.append(tree_stack.pop())

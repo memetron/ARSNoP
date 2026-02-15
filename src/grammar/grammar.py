@@ -98,7 +98,7 @@ class Grammar:
 
     @functools.cache
     def _first_dict(self) -> dict[str, set[str]]:
-        first_sets = {s: set() for s in self.terminals.union(self.non_terminals)}
+        first_sets: dict[str, set[str]] = {s: set() for s in self.terminals.union(self.non_terminals)}
         for terminal in self.terminals:
             first_sets[terminal].add(terminal)
         while True:
@@ -134,7 +134,7 @@ class Grammar:
 
     @functools.cache
     def _follow_dict(self) -> dict[str, set[str]]:
-        follow_sets = {nt: set() for nt in self.non_terminals}
+        follow_sets: dict[str, set[str]] = {nt: set() for nt in self.non_terminals}
         follow_sets[self.start_symbol].add('$')
         while True:
             # fixed-point iteration
@@ -143,7 +143,7 @@ class Grammar:
                 lhs = production.lhs
                 for i, part in enumerate(production.rhs):
                     if part in self.non_terminals:
-                        follow = set()
+                        follow: set[str] = set()
                         for next_part in production.rhs[i + 1:]:
                             follow.update(self.first(next_part) - {''})
                             if '' not in self.first(next_part):

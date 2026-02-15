@@ -41,7 +41,7 @@ class State:
                 new_items.add(new_item)
         return new_items
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "\n".join(map(str, self.items))
 
 
@@ -80,7 +80,7 @@ class Item:
         """Gets the symbol immediately following the dot in the production rule."""
         return self.production.rhs[self.dot]
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, Item) and
             self.production == other.production and
@@ -88,10 +88,10 @@ class Item:
             self.input_position == other.input_position
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.production, self.dot, self.input_position))
 
-    def __str__(self):
+    def __str__(self) -> str:
         lhs = self.production.lhs
         matched = " ".join(self.production.rhs[:self.dot])
         remaining = " ".join(self.production.rhs[self.dot:])

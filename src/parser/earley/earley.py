@@ -21,7 +21,7 @@ class Earley(ParsingEngine):
         start_items = {Item(production, 0, 0) for production in start_productions}
         self._states = [State(grammar, start_items, 0)]
 
-    def read(self, symbol: Token):
+    def read(self, symbol: Token) -> None:
         """
         Processes a symbol from the input and advances the parser state.
         Args:

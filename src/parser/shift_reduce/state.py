@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from collections.abc import Iterable
+
 from ...grammar import Grammar, Production
 
 
@@ -10,22 +14,24 @@ class Item:
         lookahead (frozenset): The lookahead set for LR(1) items. Default is empty for LR(0).
     """
 
-    def __init__(self, production, dot, lookahead=frozenset()):
+    def __init__(self, production: Production, dot: int, lookahead: frozenset[str] = frozenset()) -> None:
         self.production = production
         self.dot = dot
         self.lookahead = lookahead
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Item):
+            return NotImplemented
         return (
                 self.production == other.production and
                 self.dot == other.dot and
                 self.lookahead == other.lookahead
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.production, self.dot, tuple(self.lookahead)))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Item({self.production}, dot={self.dot}, lookahead={{{', '.join(self.lookahead)}}})"
 
 
@@ -36,23 +42,25 @@ class State:
         items (set): A set of items in this state.
     """
 
-    def __init__(self, items):
-        self.items = frozenset(items)  # Ensure immutability for hashing and comparison
+    def __init__(self, items: Iterable[Item]) -> None:
+        self.items: frozenset[Item] = frozenset(items)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, State):
+            return NotImplemented
         return self.items == other.items
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.items)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"State({list(self.items)})"
 
-    def get_kernel(self):
+    def get_kernel(self) -> frozenset[tuple[Production, int]]:
         """Extracts the kernel (core items without lookahead) from the state."""
         return frozenset((item.production, item.dot) for item in self.items)
 
-    def merge(self, other: 'State'):
+    def merge(self, other: State) -> State:
         """Merges the current state with another state, combining lookaheads."""
         new_lookaheads = {}
         for item in other.items:
@@ -67,7 +75,7 @@ class State:
         ])
 
 
-def lr0_states(grammar: Grammar):
+def lr0_states(grammar: Grammar) -> tuple[list[State], dict[tuple[int, str], int]]:
     """
     Constructs LR(0) states for the given grammar.
     Args:
@@ -93,7 +101,7 @@ def lr0_states(grammar: Grammar):
     return states, transitions
 
 
-def lr1_states(grammar: Grammar):
+def lr1_states(grammar: Grammar) -> tuple[list[State], dict[tuple[int, str], int]]:
     """
     Constructs LR(1) states for the given grammar.
     Args:
@@ -121,7 +129,7 @@ def lr1_states(grammar: Grammar):
     return states, transitions
 
 
-def lalr_states(grammar: Grammar):
+def lalr_states(grammar: Grammar) -> tuple[list[State], dict[tuple[int, str], int]]:
     """
     Constructs LALR(1) states by merging LR(1) states with the same kernel.
     Args:
@@ -165,7 +173,7 @@ def lalr_states(grammar: Grammar):
     return states, transitions
 
 
-def merge_lr1_states(states: list[State], transitions: dict):
+def merge_lr1_states(states: list[State], transitions: dict[tuple[int, str], int]) -> tuple[list[State], dict[tuple[int, str], int]]:
     """
     Merges LR(1) states with the same kernel into a single state.
     Args:

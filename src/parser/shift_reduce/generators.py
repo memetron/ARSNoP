@@ -1,8 +1,7 @@
-from typing import Any
-
 from ...grammar import Grammar
 from .automaton import Automaton
 from .state import lr0_states, lr1_states, merge_lr1_states, lalr_states
+from .types import GotoTable, ActionTable
 
 
 class Generator:
@@ -23,8 +22,8 @@ class LR0(Generator):
         generate(grammar: Grammar): Generates LR(0) automaton
     """
     def generate(self, grammar: Grammar) -> Automaton:
-        goto: dict[tuple[int, str], int] = {}
-        action: dict[tuple[int, str], tuple[Any, ...]] = {}
+        goto: GotoTable = {}
+        action: ActionTable = {}
         states, transitions = lr0_states(grammar)
 
         for i, state in enumerate(states):
@@ -57,8 +56,8 @@ class LR1(Generator):
         generate(grammar: Grammar): Generates LR(1) automaton.
     """
     def generate(self, grammar: Grammar) -> Automaton:
-        goto: dict[tuple[int, str], int] = {}
-        action: dict[tuple[int, str], tuple[Any, ...]] = {}
+        goto: GotoTable = {}
+        action: ActionTable = {}
         states, transitions = lr1_states(grammar)
 
         for i, state in enumerate(states):
@@ -91,8 +90,8 @@ class SLR(Generator):
         generate(grammar: Grammar): Generates SLR(1) automaton.
     """
     def generate(self, grammar: Grammar) -> Automaton:
-        goto: dict[tuple[int, str], int] = {}
-        action: dict[tuple[int, str], tuple[Any, ...]] = {}
+        goto: GotoTable = {}
+        action: ActionTable = {}
         states, transitions = lr0_states(grammar)
 
         for i, state in enumerate(states):
@@ -126,8 +125,8 @@ class LALR_Brute_Force(Generator):
         generate(grammar: Grammar): Generates LALR(1) automaton.
     """
     def generate(self, grammar: Grammar) -> Automaton:
-        goto: dict[tuple[int, str], int] = {}
-        action: dict[tuple[int, str], tuple[Any, ...]] = {}
+        goto: GotoTable = {}
+        action: ActionTable = {}
         states, transitions = merge_lr1_states(*lr1_states(grammar))
         for i, state in enumerate(states):
             for item in state.items:
@@ -159,8 +158,8 @@ class LALR(Generator):
         generate(grammar: Grammar): Generates LALR(1) automaton.
     """
     def generate(self, grammar: Grammar) -> Automaton:
-        goto: dict[tuple[int, str], int] = {}
-        action: dict[tuple[int, str], tuple[Any, ...]] = {}
+        goto: GotoTable = {}
+        action: ActionTable = {}
         states, transitions = lalr_states(grammar)
 
         for i, state in enumerate(states):

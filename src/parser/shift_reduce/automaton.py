@@ -1,9 +1,9 @@
 import copy
-from typing import Any
 
 from ...lexer import Token
 from ..ast import AST
 from ..parsingEngine import ParsingEngine
+from .types import GotoTable, ActionTable, Action
 
 
 class Automaton(ParsingEngine):
@@ -15,7 +15,7 @@ class Automaton(ParsingEngine):
             Processes a list of tokens, applying shift-reduce parsing, and returns the resulting AST.
     """
 
-    def __init__(self, goto: dict[tuple[int, str], int], action: dict[tuple[int, str], tuple[Any, ...]]) -> None:
+    def __init__(self, goto: GotoTable, action: ActionTable) -> None:
         """
         Initializes the Automaton with goto and action tables.
 
@@ -45,7 +45,7 @@ class Automaton(ParsingEngine):
         while index < len(buffer):
             state = stack[-1]
             curr_token = buffer[index]
-            action = self._action[state, curr_token.token]
+            action: Action = self._action[state, curr_token.token]
 
             if action[0] == "shift":
                 # Perform a shift action - and keep track of the shifted token on the ast

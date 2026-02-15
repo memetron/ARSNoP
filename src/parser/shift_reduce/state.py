@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from ...grammar import Grammar, Production
+from .types import GotoTable
 
 
 class Item:
@@ -75,7 +76,7 @@ class State:
         ])
 
 
-def lr0_states(grammar: Grammar) -> tuple[list[State], dict[tuple[int, str], int]]:
+def lr0_states(grammar: Grammar) -> tuple[list[State], GotoTable]:
     """
     Constructs LR(0) states for the given grammar.
     Args:
@@ -87,7 +88,7 @@ def lr0_states(grammar: Grammar) -> tuple[list[State], dict[tuple[int, str], int
     start_state = State(_lr0_closure(grammar, [Item(start_prod, 0)]))
     states: list[State] = [start_state]
     state_indices: dict[State, int] = {start_state: 0}
-    transitions: dict[tuple[int, str], int] = {}
+    transitions: GotoTable = {}
 
     for i, state in enumerate(states):
         for symbol in grammar.non_terminals.union(grammar.terminals):
@@ -101,7 +102,7 @@ def lr0_states(grammar: Grammar) -> tuple[list[State], dict[tuple[int, str], int
     return states, transitions
 
 
-def lr1_states(grammar: Grammar) -> tuple[list[State], dict[tuple[int, str], int]]:
+def lr1_states(grammar: Grammar) -> tuple[list[State], GotoTable]:
     """
     Constructs LR(1) states for the given grammar.
     Args:
@@ -113,7 +114,7 @@ def lr1_states(grammar: Grammar) -> tuple[list[State], dict[tuple[int, str], int
     start_state = State(_lr1_closure(grammar, [Item(start_prod, 0, frozenset({"$"}))]))
     states: list[State] = [start_state]
     state_indices: dict[State, int] = {start_state: 0}
-    transitions: dict[tuple[int, str], int] = {}
+    transitions: GotoTable = {}
 
     for i, state in enumerate(states):
         for symbol in grammar.non_terminals.union(grammar.terminals):
@@ -129,7 +130,7 @@ def lr1_states(grammar: Grammar) -> tuple[list[State], dict[tuple[int, str], int
     return states, transitions
 
 
-def lalr_states(grammar: Grammar) -> tuple[list[State], dict[tuple[int, str], int]]:
+def lalr_states(grammar: Grammar) -> tuple[list[State], GotoTable]:
     """
     Constructs LALR(1) states by merging LR(1) states with the same kernel.
     Args:
@@ -143,7 +144,7 @@ def lalr_states(grammar: Grammar) -> tuple[list[State], dict[tuple[int, str], in
     # Initialize state list and kernel indices
     states: list[State] = [start_state]
     kernel_indices: dict[frozenset[tuple[Production, int]], int] = {start_state.get_kernel(): 0}
-    transitions: dict[tuple[int, str], int] = {}
+    transitions: GotoTable = {}
     worklist: list[State] = [start_state]
 
     while worklist:
@@ -173,7 +174,7 @@ def lalr_states(grammar: Grammar) -> tuple[list[State], dict[tuple[int, str], in
     return states, transitions
 
 
-def merge_lr1_states(states: list[State], transitions: dict[tuple[int, str], int]) -> tuple[list[State], dict[tuple[int, str], int]]:
+def merge_lr1_states(states: list[State], transitions: GotoTable) -> tuple[list[State], GotoTable]:
     """
     Merges LR(1) states with the same kernel into a single state.
     Args:
@@ -201,7 +202,7 @@ def merge_lr1_states(states: list[State], transitions: dict[tuple[int, str], int
         for index in state_indices_list:
             state_mapping[index] = len(merged_states) - 1
 
-    merged_transitions: dict[tuple[int, str], int] = {}
+    merged_transitions: GotoTable = {}
     for (state_idx, symbol), target_state in transitions.items():
         merged_source = state_mapping[state_idx]
         merged_target = state_mapping[target_state]

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import Callable, TypeVar
+from typing import Callable
 
 from ..state import Item
 from .util import fixed_point
 from ....grammar.grammar import Grammar
 
-ItemT = TypeVar("ItemT")
 
 type LookaheadFn = Callable[[Item, Grammar], frozenset[str]]
 

@@ -13,7 +13,7 @@ ARSNoP (A Roughly Sufficient Number of Parsers) is a pure Python parsing library
 uv run -m src.example.main
 ```
 
-There is no build system or package manager config.
+Dependencies are listed in `pyproject.toml` (Python ≥3.12, no runtime dependencies).
 
 ## Testing
 
@@ -25,6 +25,8 @@ uv run -m pytest test/ -q
 ```
 
 - If `pytest` is not installed, install it with `pip install pytest`.
+- Shared test fixtures (grammars, parse helpers) live in `test/parser/shift_reduce/generators/conftest.py`.
+- Cross-generator consistency tests in `test_consistency.py` verify all LR variants produce the same results.
 
 ## Architecture
 
@@ -36,7 +38,11 @@ The pipeline follows: **Input Text → Lexer → Tokens → ParsingEngine → AS
 - **`grammar/`** — Represents CFGs parsed from BNF-style rules. Computes FIRST/FOLLOW sets (cached via `@functools.cache`), nullability, closure, and successor operations for LR item sets.
 - **`parser/`** — Main interface. `parser.from_file(path, parser="earley")` is the factory that reads a grammar file and returns a configured `Parser` instance.
   - **`parser/earley/`** — Top-down dynamic programming parser. Handles all CFGs including ambiguous grammars.
-  - **`parser/shift_reduce/`** — Bottom-up LR family. `generators.py` builds action/goto tables for LR0/SLR/LR1/LALR. `automaton.py` is the `ParsingEngine` that executes shift-reduce parsing using those tables.
+  - **`parser/shift_reduce/`** — Bottom-up LR family. `automaton.py` is the `ParsingEngine` that executes shift-reduce parsing. The `generators/` sub-package builds action/goto tables:
+    - `generator.py` — Abstract `Generator` base class (template method pattern: `generate()` orchestrates `_build_states` → action/goto table construction).
+    - `lr0.py`, `lr1.py`, `lalr.py`, `lalr_brute_force.py` — Concrete generators for each LR variant.
+    - `closure.py` — Parameterized closure computation using `@fixed_point`.
+    - `util.py` — The `@fixed_point` decorator: repeatedly applies a pure transformation until convergence (`new_state == state`). Used for closure and lookahead propagation.
 - **`transformer/`** — Visitor-pattern base class for DFS traversal and transformation of ASTs.
 - **`utils.py`** — Shared helpers (`flatten`, `print_states`).
 
@@ -54,6 +60,10 @@ KEYWORD exact_string
 .IGNORE
 WHITESPACE
 ```
+
+## Linting
+
+- Ruff is used for linting. Run `uv run ruff check src/ test/` after making changes.
 
 ## Typing
 

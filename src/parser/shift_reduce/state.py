@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-
 from ...grammar import Production
 
 
@@ -59,17 +58,3 @@ class State:
     def get_kernel(self) -> frozenset[tuple[Production, int]]:
         """Extracts the kernel (core items without lookahead) from the state."""
         return frozenset((item.production, item.dot) for item in self.items)
-
-    def merge(self, other: State) -> State:
-        """Merges the current state with another state, combining lookaheads."""
-        new_lookaheads: dict[tuple[Production, int], frozenset[str]] = {}
-        for item in other.items:
-            new_lookaheads[item.production, item.dot] = item.lookahead
-        for item in self.items:
-            new_lookaheads[item.production, item.dot] = item.lookahead.union(
-                new_lookaheads[item.production, item.dot]
-            )
-        return State([
-            Item(production, dot, lookahead)
-            for (production, dot), lookahead in new_lookaheads.items()
-        ])

@@ -1,5 +1,7 @@
 from __future__ import annotations
+from typing import Iterable
 
+from .closure import closure_step
 from ....grammar import Grammar, Production
 from ..automaton import Automaton
 from ..generators.generator import Generator
@@ -34,49 +36,25 @@ def lr1_states(grammar: Grammar) -> tuple[list[State], GotoTable]:
     return states, transitions
 
 
-def _lr1_closure(grammar: Grammar, items: list[Item]) -> list[Item]:
-    closure_set = set(items)
-    changed = True
+def _lr1_lookahead(item: Item, grammar: Grammar) -> frozenset[str]:
+    remainder = item.production.rhs[item.dot + 1:]
+    first: set[str] = set()
 
-    while changed:
-        changed = False
-        for item in list(closure_set):
-            if item.dot < len(item.production.rhs):
-                symbol = item.production.rhs[item.dot]
-                if symbol in grammar.non_terminals:
-                    remainder = item.production.rhs[item.dot + 1:]
-                    first_set: set[str] = set()
-                    for sym in remainder:
-                        first_set.update(grammar.first(sym))
-                        if '' not in grammar.first(sym):
-                            break
-                    else:
-                        first_set.update(item.lookahead)
+    for sym in remainder:
+        sym_first = grammar.first(sym)
+        first.update(sym_first - {''})
+        if '' not in sym_first:
+            break
+    else:
+        first.update(item.lookahead)
 
-                    first_set.discard('')
+    first.discard('')
+    return frozenset(first)
 
-                    for new_prod in grammar.lookup_productions(symbol):
-                        new_item = Item(new_prod, 0, frozenset(first_set))
-                        if new_item not in closure_set:
-                            closure_set.add(new_item)
-                            changed = True
+def _lr1_closure(grammar: Grammar, items: Iterable[Item]) -> frozenset[Item]:
+    return closure_step(frozenset(items), grammar, _lr1_lookahead)
 
-    # Merge lookaheads of like kernels within state
-    kernel_dict: dict[tuple[Production, int], set[str]] = {}
-    for item in list(closure_set):
-        kernel = (item.production, item.dot)
-        if kernel not in kernel_dict:
-            kernel_dict[kernel] = set(item.lookahead)
-        else:
-            kernel_dict[kernel].update(item.lookahead)
-
-    return [
-        Item(production, dot, frozenset(lookahead))
-        for (production, dot), lookahead in kernel_dict.items()
-    ]
-
-
-def _lr1_successor(grammar: Grammar, items: list[Item], symbol: str) -> list[Item]:
+def _lr1_successor(grammar: Grammar, items: list[Item], symbol: str) -> frozenset[Item]:
     return _lr1_closure(
         grammar,
         [

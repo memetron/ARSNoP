@@ -1,49 +1,61 @@
 from __future__ import annotations
 
-from ....grammar import Grammar, Production
+from ....grammar.production import Production
+from ....grammar import Grammar
 from ..automaton import Automaton
 from ..generators.generator import Generator
-from .lr1 import lr1_states
-from ..state import State
-from ..types import GotoTable, ActionTable
+from .lr1 import _lr1_closure, lr1_states # type: ignore
+from ..state import Item, State
+from ..types import GotoTable, ActionTable, Kernel
 
+def _merge_state(state: State, other: State, grammar: Grammar) -> State:
+        """Merges two states by unioning lookaheads for identical kernel items and recomputing closure."""
+        merged_items_dict: dict[tuple[Production, int], frozenset[str]] = {}
+        for item in state.items.union(other.items):
+            key = (item.production, item.dot)
+            if key in merged_items_dict:
+                merged_items_dict[key] = merged_items_dict[key].union(item.lookahead)
+            else:
+                merged_items_dict[key] = item.lookahead
+        merged_items = [Item(prod, dot, la) for (prod, dot), la in merged_items_dict.items()]
+        return State(_lr1_closure(grammar, merged_items))
 
-def merge_lr1_states(states: list[State], transitions: GotoTable) -> tuple[list[State], GotoTable]:
+def _merge_lr1_states(states: list[State], transitions: GotoTable, grammar: Grammar) -> tuple[list[State], GotoTable]:
     """
-    Merges LR(1) states with the same kernel into a single state.
+    Merge LR(1) states with the same kernel into a single state, unioning lookaheads.
     Args:
-        states (List[State]): A list of LR(1) states.
-        transitions (dict): A dictionary of transitions.
+        states: List of LR(1) states.
+        transitions: Original LR(1) GotoTable.
     Returns:
-        Tuple[List[State], dict]: A list of merged states and a dictionary of merged transitions.
+        merged_states, merged_transitions
     """
-    kernel_map: dict[frozenset[tuple[Production, int]], list[int]] = {}
-
-    for i, state in enumerate(states):
+    # Step 1: Group states by kernel
+    kernel_map: dict[Kernel, list[int]] = {}
+    for idx, state in enumerate(states):
         kernel = state.get_kernel()
-        if kernel not in kernel_map:
-            kernel_map[kernel] = []
-        kernel_map[kernel].append(i)
+        kernel_map.setdefault(kernel, []).append(idx)
 
+    # Step 2: Merge states per kernel
     merged_states: list[State] = []
-    state_mapping: dict[int, int] = {}
-
-    for kernel, state_indices_list in kernel_map.items():
-        merged_state = states[state_indices_list[0]]
-        for index in state_indices_list[1:]:
-            merged_state = merged_state.merge(states[index])
+    old_to_merged: dict[int, int] = {}
+    for kernel_indices in kernel_map.values():
+        # Start with the first state
+        merged_state = states[kernel_indices[0]]
+        for idx in kernel_indices[1:]:
+            merged_state = _merge_state(merged_state, states[idx], grammar)
         merged_states.append(merged_state)
-        for index in state_indices_list:
-            state_mapping[index] = len(merged_states) - 1
+        merged_idx = len(merged_states) - 1
+        for old_idx in kernel_indices:
+            old_to_merged[old_idx] = merged_idx
 
+    # Step 3: Remap transitions to merged state indices
     merged_transitions: GotoTable = {}
-    for (state_idx, symbol), target_state in transitions.items():
-        merged_source = state_mapping[state_idx]
-        merged_target = state_mapping[target_state]
-        merged_transitions[(merged_source, symbol)] = merged_target
+    for (src, symbol), tgt in transitions.items():
+        merged_src = old_to_merged[src]
+        merged_tgt = old_to_merged[tgt]
+        merged_transitions[(merged_src, symbol)] = merged_tgt
 
     return merged_states, merged_transitions
-
 
 class LALR_Brute_Force(Generator):
     """
@@ -55,7 +67,7 @@ class LALR_Brute_Force(Generator):
     def generate(self, grammar: Grammar) -> Automaton:
         goto: GotoTable = {}
         action: ActionTable = {}
-        states, transitions = merge_lr1_states(*lr1_states(grammar))
+        states, transitions = _merge_lr1_states(*lr1_states(grammar), grammar)
         for i, state in enumerate(states):
             for item in state.items:
                 if item.dot == len(item.production.rhs):  # Reduce or Accept state

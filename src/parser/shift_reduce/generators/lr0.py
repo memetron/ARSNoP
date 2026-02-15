@@ -1,4 +1,7 @@
 from __future__ import annotations
+from typing import Iterable
+
+from .closure import closure_step
 
 from ....grammar import Grammar, Production
 from ..automaton import Automaton
@@ -32,25 +35,10 @@ def lr0_states(grammar: Grammar) -> tuple[list[State], GotoTable]:
                 transitions[(i, symbol)] = state_indices[new_state]
     return states, transitions
 
+def _lr0_closure(grammar: Grammar, items: Iterable[Item]) -> frozenset[Item]:
+    return closure_step(frozenset(items), grammar, lambda i, g: frozenset())
 
-def _lr0_closure(grammar: Grammar, items: list[Item]) -> list[Item]:
-    closure_set = set(items)
-    changed = True
-    while changed:
-        changed = False
-        for item in list(closure_set):
-            if item.dot < len(item.production.rhs):
-                symbol = item.production.rhs[item.dot]
-                if symbol in grammar.non_terminals:
-                    for new_prod in grammar.lookup_productions(symbol):
-                        new_item = Item(new_prod, 0)
-                        if new_item not in closure_set:
-                            closure_set.add(new_item)
-                            changed = True
-    return list(closure_set)
-
-
-def _lr0_successor(grammar: Grammar, items: list[Item], symbol: str) -> list[Item]:
+def _lr0_successor(grammar: Grammar, items: list[Item], symbol: str) -> frozenset[Item]:
     return _lr0_closure(
         grammar,
         [
@@ -59,7 +47,6 @@ def _lr0_successor(grammar: Grammar, items: list[Item], symbol: str) -> list[Ite
             if item.dot < len(item.production.rhs) and item.production.rhs[item.dot] == symbol
         ]
     )
-
 
 class LR0(Generator):
     """

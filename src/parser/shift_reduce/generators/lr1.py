@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from ...grammar import Grammar, Production
-from .automaton import Automaton
-from .generators import Generator
-from .state import Item, State
-from .types import GotoTable, ActionTable
+from ....grammar import Grammar, Production
+from ..automaton import Automaton
+from ..generators.generator import Generator
+from ..state import Item, State
+from ..types import GotoTable, ActionTable
 
 
 def lr1_states(grammar: Grammar) -> tuple[list[State], GotoTable]:

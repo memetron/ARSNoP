@@ -1,5 +1,5 @@
-from ...grammar import Grammar
-from .automaton import Automaton
+from ....grammar import Grammar
+from ..automaton import Automaton
 
 
 class Generator:

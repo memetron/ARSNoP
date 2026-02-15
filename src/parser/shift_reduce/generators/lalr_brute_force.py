@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from ...grammar import Grammar, Production
-from .automaton import Automaton
-from .generators import Generator
+from ....grammar import Grammar, Production
+from ..automaton import Automaton
+from ..generators.generator import Generator
 from .lr1 import lr1_states
-from .state import State
-from .types import GotoTable, ActionTable
+from ..state import State
+from ..types import GotoTable, ActionTable
 
 
 def merge_lr1_states(states: list[State], transitions: GotoTable) -> tuple[list[State], GotoTable]:

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from ...grammar import Grammar, Production
-from .automaton import Automaton
-from .generators import Generator
+from ....grammar import Grammar, Production
+from ..automaton import Automaton
+from ..generators.generator import Generator
 from .lr0 import lr0_states
 from .lr1 import _lr1_closure  # pyright: ignore[reportPrivateUsage]
-from .state import Item, State
-from .types import (
+from ..state import Item, State
+from ..types import (
     FAKE,
     ActionTable,
     ClosureItem,

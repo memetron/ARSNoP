@@ -1,0 +1,58 @@
+import re
+
+from flask import Blueprint, jsonify, request
+
+from src.grammar import Grammar
+from src.parser.parser import _GRAMMAR_FORMAT
+from ..grammar_store import list_bundled, load_bundled
+from ..serializers import serialize_production
+
+grammar_bp = Blueprint("grammar", __name__, url_prefix="/api/grammar")
+
+
+@grammar_bp.route("/bundled", methods=["GET"])
+def get_bundled_list():
+    return jsonify(list_bundled())
+
+
+@grammar_bp.route("/bundled/<name>", methods=["GET"])
+def get_bundled_text(name):
+    try:
+        text = load_bundled(name)
+        return jsonify({"name": name, "text": text})
+    except FileNotFoundError as e:
+        return jsonify({"error": "not_found", "message": str(e)}), 404
+
+
+@grammar_bp.route("/analyze", methods=["POST"])
+def analyze_grammar():
+    data = request.get_json(force=True)
+    grammar_text = data.get("grammar", "")
+
+    match = re.match(_GRAMMAR_FORMAT, grammar_text)
+    if not match:
+        return jsonify({
+            "error": "invalid_format",
+            "message": "Grammar must contain :GRAMMAR and :TERMINALS sections",
+        }), 400
+
+    grammar_section, terminals_section = match.groups()
+
+    try:
+        grammar = Grammar(grammar_section)
+    except Exception as e:
+        return jsonify({"error": "grammar_error", "message": str(e)}), 400
+
+    first_sets = {}
+    follow_sets = {}
+    for nt in sorted(grammar.non_terminals):
+        first_sets[nt] = sorted(grammar.first(nt))
+        follow_sets[nt] = sorted(grammar.follow(nt))
+
+    return jsonify({
+        "terminals": sorted(grammar.terminals),
+        "nonTerminals": sorted(grammar.non_terminals),
+        "productions": [serialize_production(p) for p in grammar.productions],
+        "firstSets": first_sets,
+        "followSets": follow_sets,
+    })

@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
-
-if TYPE_CHECKING:
-    from .parser.shift_reduce.state import State
+from typing import Any, cast
+from .parser.shift_reduce.state import State
 
 
 def flatten(arr: Any) -> list[Any]:

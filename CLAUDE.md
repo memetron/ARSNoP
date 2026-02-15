@@ -62,6 +62,12 @@ WHITESPACE
 - Use type aliases (PEP 695 `type` syntax) to reduce verbosity when a complex type appears more than once. Existing aliases live in `src/parser/shift_reduce/types.py`.
 - Run `uv run pyright src/` after making changes to catch regressions.
 
+## Code Style
+
+- Keep functions short and singular in purpose. When a function performs multiple
+  distinct phases, extract each phase into a named helper with a docstring. The
+  top-level function should read like a high-level description of the algorithm.
+
 ## Workflow
 
 - Use a feature branch strategy. Always create a new branch off `main` for changes rather than committing directly to `main`.

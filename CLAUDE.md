@@ -55,6 +55,13 @@ KEYWORD exact_string
 WHITESPACE
 ```
 
+## Typing
+
+- Pyright is configured in strict mode. All new and modified code must pass `uv run pyright src/` with 0 errors.
+- Prefer concrete types over `Any`. Use `Any` only when the type is genuinely unconstrained (e.g., user-defined transformer return values).
+- Use type aliases (PEP 695 `type` syntax) to reduce verbosity when a complex type appears more than once. Existing aliases live in `src/parser/shift_reduce/types.py`.
+- Run `uv run pyright src/` after making changes to catch regressions.
+
 ## Workflow
 
 - Use a feature branch strategy. Always create a new branch off `main` for changes rather than committing directly to `main`.

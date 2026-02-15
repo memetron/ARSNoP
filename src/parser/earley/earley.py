@@ -21,7 +21,7 @@ class Earley(ParsingEngine):
         start_items = {Item(production, 0, 0) for production in start_productions}
         self._states = [State(grammar, start_items, 0)]
 
-    def read(self, symbol: Token):
+    def read(self, symbol: Token) -> None:
         """
         Processes a symbol from the input and advances the parser state.
         Args:
@@ -75,14 +75,15 @@ def _to_ast(item: Item) -> AST:
     Returns:
         AST: The constructed abstract syntax tree.
     """
-    items = []
-    curr = item
+    raw_items: list[Item] = []
+    curr: Item = item
     while curr.prev_step:
-        items.append(curr)
+        raw_items.append(curr)
         curr = curr.prev_step
-    for i, curr in enumerate(items):
-        if curr.completed_by is not None:
-            items[i] = _to_ast(curr.completed_by)
-        else:
-            items[i] = AST(curr.matched_token)
-    return AST(item.production.lhs, reversed(items))
+    children: list[AST] = []
+    for curr_item in raw_items:
+        if curr_item.completed_by is not None:
+            children.append(_to_ast(curr_item.completed_by))
+        elif curr_item.matched_token is not None:
+            children.append(AST(curr_item.matched_token))
+    return AST(item.production.lhs, list(reversed(children)))

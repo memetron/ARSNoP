@@ -6,7 +6,7 @@ class Token:
         lexeme (str): The actual string of characters matched in the input text.
     """
 
-    def __init__(self, token: str, lexeme: str):
+    def __init__(self, token: str, lexeme: str) -> None:
         """
         Initializes a Token object with a type and its corresponding lexeme.
         Args:
@@ -16,5 +16,5 @@ class Token:
         self.token = token
         self.lexeme = lexeme
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"token({self.token}, \"{self.lexeme}\")"

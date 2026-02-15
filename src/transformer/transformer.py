@@ -23,13 +23,13 @@ class Transformer:
         """
         return self._transform_dfs(root)
 
-    def _transform_dfs(self, node):
-        new_children = []
+    def _transform_dfs(self, node: AST) -> Any:
+        new_children: list[Any] = []
         for child in node.children:
             new_children.append(self._transform_dfs(child))
         return self._visit(node.content, new_children)
 
-    def _visit(self, root, children):
+    def _visit(self, root: str | Token, children: list[Any]) -> Any:
         if isinstance(root, Token):
             return root.lexeme
         else:

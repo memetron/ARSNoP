@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import re
+from typing import Any
 
 from ..grammar import Grammar
 from ..lexer import Lexer
@@ -10,7 +13,7 @@ from ..transformer import Transformer
 # Regular expression to extract grammar and terminals from a text file
 _GRAMMAR_FORMAT = re.compile(r":GRAMMAR(.*):TERMINALS(.*)", re.DOTALL)
 
-def from_file(file_path: str, parser="earley", transformer: Transformer | None = None):
+def from_file(file_path: str, parser: str = "earley", transformer: Transformer | None = None) -> 'Parser':
     """
     Creates a Parser instance from a grammar definition file.
 
@@ -79,7 +82,7 @@ class Parser:
             Parses the input text and returns the transformed AST or raw AST.
     """
 
-    def __init__(self, lexer: Lexer, parser: ParsingEngine, transformer: Transformer | None = None):
+    def __init__(self, lexer: Lexer, parser: ParsingEngine, transformer: Transformer | None = None) -> None:
         """
         Initializes the Parser instance.
 
@@ -92,7 +95,7 @@ class Parser:
         self._lexer = lexer
         self._parser = parser
 
-    def parse(self, text: str):
+    def parse(self, text: str) -> Any:
         """
         Parses the input text and generates an Abstract Syntax Tree (AST).
 

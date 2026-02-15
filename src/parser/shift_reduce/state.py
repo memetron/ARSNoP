@@ -1,4 +1,9 @@
+from __future__ import annotations
+
+from collections.abc import Iterable
+
 from ...grammar import Grammar, Production
+from .types import GotoTable
 
 
 class Item:
@@ -10,22 +15,24 @@ class Item:
         lookahead (frozenset): The lookahead set for LR(1) items. Default is empty for LR(0).
     """
 
-    def __init__(self, production, dot, lookahead=frozenset()):
+    def __init__(self, production: Production, dot: int, lookahead: frozenset[str] = frozenset()) -> None:
         self.production = production
         self.dot = dot
         self.lookahead = lookahead
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Item):
+            return NotImplemented
         return (
                 self.production == other.production and
                 self.dot == other.dot and
                 self.lookahead == other.lookahead
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.production, self.dot, tuple(self.lookahead)))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Item({self.production}, dot={self.dot}, lookahead={{{', '.join(self.lookahead)}}})"
 
 
@@ -36,25 +43,27 @@ class State:
         items (set): A set of items in this state.
     """
 
-    def __init__(self, items):
-        self.items = frozenset(items)  # Ensure immutability for hashing and comparison
+    def __init__(self, items: Iterable[Item]) -> None:
+        self.items: frozenset[Item] = frozenset(items)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, State):
+            return NotImplemented
         return self.items == other.items
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.items)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"State({list(self.items)})"
 
-    def get_kernel(self):
+    def get_kernel(self) -> frozenset[tuple[Production, int]]:
         """Extracts the kernel (core items without lookahead) from the state."""
         return frozenset((item.production, item.dot) for item in self.items)
 
-    def merge(self, other: 'State'):
+    def merge(self, other: State) -> State:
         """Merges the current state with another state, combining lookaheads."""
-        new_lookaheads = {}
+        new_lookaheads: dict[tuple[Production, int], frozenset[str]] = {}
         for item in other.items:
             new_lookaheads[item.production, item.dot] = item.lookahead
         for item in self.items:
@@ -67,7 +76,7 @@ class State:
         ])
 
 
-def lr0_states(grammar: Grammar):
+def lr0_states(grammar: Grammar) -> tuple[list[State], GotoTable]:
     """
     Constructs LR(0) states for the given grammar.
     Args:
@@ -77,9 +86,9 @@ def lr0_states(grammar: Grammar):
     """
     start_prod = Production("S'", [grammar.start_symbol])
     start_state = State(_lr0_closure(grammar, [Item(start_prod, 0)]))
-    states = [start_state]
-    state_indices = {start_state: 0}  # Map states to indices
-    transitions = {}
+    states: list[State] = [start_state]
+    state_indices: dict[State, int] = {start_state: 0}
+    transitions: GotoTable = {}
 
     for i, state in enumerate(states):
         for symbol in grammar.non_terminals.union(grammar.terminals):
@@ -93,7 +102,7 @@ def lr0_states(grammar: Grammar):
     return states, transitions
 
 
-def lr1_states(grammar: Grammar):
+def lr1_states(grammar: Grammar) -> tuple[list[State], GotoTable]:
     """
     Constructs LR(1) states for the given grammar.
     Args:
@@ -103,9 +112,9 @@ def lr1_states(grammar: Grammar):
     """
     start_prod = Production("S'", [grammar.start_symbol])
     start_state = State(_lr1_closure(grammar, [Item(start_prod, 0, frozenset({"$"}))]))
-    states = [start_state]
-    state_indices = {start_state: 0}  # Map states to indices
-    transitions = {}
+    states: list[State] = [start_state]
+    state_indices: dict[State, int] = {start_state: 0}
+    transitions: GotoTable = {}
 
     for i, state in enumerate(states):
         for symbol in grammar.non_terminals.union(grammar.terminals):
@@ -121,7 +130,7 @@ def lr1_states(grammar: Grammar):
     return states, transitions
 
 
-def lalr_states(grammar: Grammar):
+def lalr_states(grammar: Grammar) -> tuple[list[State], GotoTable]:
     """
     Constructs LALR(1) states by merging LR(1) states with the same kernel.
     Args:
@@ -133,10 +142,10 @@ def lalr_states(grammar: Grammar):
     start_state = State(_lr1_closure(grammar, [Item(start_prod, 0, frozenset({"$"}))]))
 
     # Initialize state list and kernel indices
-    states = [start_state]
-    kernel_indices = {start_state.get_kernel(): 0}  # Map kernels to indices
-    transitions = {}
-    worklist = [start_state]  # Fixed-point construction using a worklist
+    states: list[State] = [start_state]
+    kernel_indices: dict[frozenset[tuple[Production, int]], int] = {start_state.get_kernel(): 0}
+    transitions: GotoTable = {}
+    worklist: list[State] = [start_state]
 
     while worklist:
         current_state = worklist.pop()
@@ -165,7 +174,7 @@ def lalr_states(grammar: Grammar):
     return states, transitions
 
 
-def merge_lr1_states(states: list[State], transitions: dict):
+def merge_lr1_states(states: list[State], transitions: GotoTable) -> tuple[list[State], GotoTable]:
     """
     Merges LR(1) states with the same kernel into a single state.
     Args:
@@ -174,7 +183,7 @@ def merge_lr1_states(states: list[State], transitions: dict):
     Returns:
         Tuple[List[State], dict]: A list of merged states and a dictionary of merged transitions.
     """
-    kernel_map = {}
+    kernel_map: dict[frozenset[tuple[Production, int]], list[int]] = {}
 
     for i, state in enumerate(states):
         kernel = state.get_kernel()
@@ -182,20 +191,20 @@ def merge_lr1_states(states: list[State], transitions: dict):
             kernel_map[kernel] = []
         kernel_map[kernel].append(i)
 
-    merged_states = []
-    state_mapping = {}
+    merged_states: list[State] = []
+    state_mapping: dict[int, int] = {}
 
-    for kernel, state_indices in kernel_map.items():
-        merged_state = states[state_indices[0]]
-        for index in state_indices[1:]:
+    for kernel, state_indices_list in kernel_map.items():
+        merged_state = states[state_indices_list[0]]
+        for index in state_indices_list[1:]:
             merged_state = merged_state.merge(states[index])
         merged_states.append(merged_state)
-        for index in state_indices:
+        for index in state_indices_list:
             state_mapping[index] = len(merged_states) - 1
 
-    merged_transitions = {}
-    for (state, symbol), target_state in transitions.items():
-        merged_source = state_mapping[state]
+    merged_transitions: GotoTable = {}
+    for (state_idx, symbol), target_state in transitions.items():
+        merged_source = state_mapping[state_idx]
         merged_target = state_mapping[target_state]
         merged_transitions[(merged_source, symbol)] = merged_target
 
@@ -240,7 +249,7 @@ def _lr1_closure(grammar: Grammar, items: list[Item]) -> list[Item]:
                 symbol = item.production.rhs[item.dot]
                 if symbol in grammar.non_terminals:
                     remainder = item.production.rhs[item.dot + 1:]
-                    first_set = set()
+                    first_set: set[str] = set()
                     for sym in remainder:
                         first_set.update(grammar.first(sym))
                         if '' not in grammar.first(sym):
@@ -257,7 +266,7 @@ def _lr1_closure(grammar: Grammar, items: list[Item]) -> list[Item]:
                             changed = True
 
     # Merge lookaheads of like kernels within state
-    kernel_dict = {}
+    kernel_dict: dict[tuple[Production, int], set[str]] = {}
     for item in list(closure_set):
         kernel = (item.production, item.dot)
         if kernel not in kernel_dict:

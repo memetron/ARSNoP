@@ -4,12 +4,26 @@ from typing import Iterable
 from .closure import closure_step
 
 from ....grammar import Grammar, Production
-from ..automaton import Automaton
 from ..generators.generator import Generator
 from ..state import Item, State
-from ..types import GotoTable, ActionTable
+from ..types import GotoTable
 
+class LR0(Generator):
+    def _build_states(self, grammar: Grammar):
+        return lr0_states(grammar)
 
+    def _reduce_lookaheads(self, grammar: Grammar, item: Item) -> Iterable[str]:
+        return grammar.terminals.union({'$'})
+    
+class SLR(Generator):
+    def _build_states(self, grammar: Grammar):
+        return lr0_states(grammar)
+    
+    def _reduce_lookaheads(self, grammar: Grammar, item: Item) -> Iterable[str]:
+        if item.production.lhs == "S'":
+            return {'$'}
+        return grammar.follow(item.production.lhs)
+    
 def lr0_states(grammar: Grammar) -> tuple[list[State], GotoTable]:
     """
     Constructs LR(0) states for the given grammar.
@@ -47,70 +61,3 @@ def _lr0_successor(grammar: Grammar, items: list[Item], symbol: str) -> frozense
             if item.dot < len(item.production.rhs) and item.production.rhs[item.dot] == symbol
         ]
     )
-
-class LR0(Generator):
-    """
-    Class for generating LR(0) parsing tables.
-    Methods:
-        generate(grammar: Grammar): Generates LR(0) automaton
-    """
-    def generate(self, grammar: Grammar) -> Automaton:
-        goto: GotoTable = {}
-        action: ActionTable = {}
-        states, transitions = lr0_states(grammar)
-
-        for i, state in enumerate(states):
-            for item in state.items:
-                if item.dot == len(item.production.rhs):  # Reduce or Accept state
-                    if item.production.lhs == "S'":
-                        action[(i, '$')] = ("accept",)
-                    else:
-                        for terminal in grammar.terminals | {'$'}:
-                            action[(i, terminal)] = ("reduce", item.production)
-                elif item.dot < len(item.production.rhs):  # Shift state
-                    symbol = item.production.rhs[item.dot]
-                    if symbol in grammar.terminals:
-                        next_state = transitions.get((i, symbol))
-                        if next_state is not None:
-                            action[(i, symbol)] = ("shift", next_state)
-
-            for non_terminal in grammar.non_terminals:
-                next_state = transitions.get((i, non_terminal))
-                if next_state is not None:
-                    goto[(i, non_terminal)] = next_state
-
-        return Automaton(goto, action)
-
-
-class SLR(Generator):
-    """
-    Class for generating SLR(1) parsing tables.
-    Methods:
-        generate(grammar: Grammar): Generates SLR(1) automaton.
-    """
-    def generate(self, grammar: Grammar) -> Automaton:
-        goto: GotoTable = {}
-        action: ActionTable = {}
-        states, transitions = lr0_states(grammar)
-
-        for i, state in enumerate(states):
-            for item in state.items:
-                if item.dot == len(item.production.rhs):  # Reduce or Accept state
-                    if item.production.lhs == "S'":
-                        action[(i, '$')] = ("accept",)
-                    else:
-                        for terminal in grammar.follow(item.production.lhs):
-                            action[(i, terminal)] = ("reduce", item.production)
-                elif item.dot < len(item.production.rhs):  # Shift state
-                    symbol = item.production.rhs[item.dot]
-                    if symbol in grammar.terminals:
-                        next_state = transitions.get((i, symbol))
-                        if next_state is not None:
-                            action[(i, symbol)] = ("shift", next_state)
-
-            for non_terminal in grammar.non_terminals:
-                next_state = transitions.get((i, non_terminal))
-                if next_state is not None:
-                    goto[(i, non_terminal)] = next_state
-
-        return Automaton(goto, action)

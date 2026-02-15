@@ -13,7 +13,7 @@ ARSNoP (A Roughly Sufficient Number of Parsers) is a pure Python parsing library
 uv run -m src.example.main
 ```
 
-Dependencies are listed in `pyproject.toml` (Python ≥3.12, no runtime dependencies).
+Dependencies are listed in `pyproject.toml` (Python ≥3.12, Flask + Flask-CORS for the web demo).
 
 ## Testing
 
@@ -82,6 +82,41 @@ WHITESPACE
 
 - Use a feature branch strategy. Always create a new branch off `main` for changes rather than committing directly to `main`.
 - Do not include `Co-Authored-By` lines in commit messages.
+
+## Web Demo
+
+An interactive web app for visualizing parser tables and step-by-step parse execution.
+
+```bash
+# Start both servers (Flask API + Vite dev server)
+make dev
+
+# Or start them individually:
+make api   # Flask REST API on http://localhost:5001
+make web   # Vite dev server on http://localhost:5173 (proxies /api to Flask)
+
+# Install frontend dependencies (first time only)
+make install-web
+```
+
+### REST API (`rest/`)
+
+A Flask backend that exposes the parsing library over HTTP:
+
+- **`app.py`** — Flask factory with CORS and blueprint registration.
+- **`grammar_store.py`** — Discovers/loads bundled `.bnf` files from `src/resources/`.
+- **`serializers.py`** — JSON serialization for domain objects (Production, Item, State, Action/Goto tables, Token, AST).
+- **`tracer.py`** — Trace-generating parse loop that mirrors `Automaton.parse()` but records each step.
+- **`routes/grammar.py`** — Grammar endpoints: list bundled, load bundled, analyze (FIRST/FOLLOW sets).
+- **`routes/parser.py`** — Parse endpoints: generate tables, execute parse with trace.
+
+### Frontend (`web/`)
+
+A React + TypeScript + Vite app using MUI and CodeMirror:
+
+- Grammar editor with bundled grammar selector and parser variant picker (LR0, SLR, LR1, LALR, LALR BF).
+- Results panel with tabs: Grammar Info, States, Action/Goto Tables, Parse Trace (stepper + table), AST tree view.
+- State managed via Zustand (`web/src/store/useAppStore.ts`).
 
 ### Parser Selection
 

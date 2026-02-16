@@ -2,12 +2,23 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Callable
 
 from ....grammar import Grammar
 from ..automaton import Automaton
 from ..types import Action, ActionEntry, ActionTable, GotoTable
 from ..state import Item, State
+
+
+@dataclass(frozen=True)
+class GeneratorResult:
+    """The output of LR table generation: states plus action and goto tables."""
+
+    states: list[State]
+    action_table: ActionTable
+    goto_table: GotoTable
+
 
 class Generator(ABC):
     """
@@ -18,7 +29,8 @@ class Generator(ABC):
         _reduce_lookaheads(grammar, item)
     """
 
-    def generate(self, grammar: Grammar) -> Automaton:
+    def generate_tables(self, grammar: Grammar) -> GeneratorResult:
+        """Build and return the LR states, action table, and goto table."""
         states, transitions = self._build_states(grammar)
         action = _build_action_table(
             grammar,
@@ -27,7 +39,11 @@ class Generator(ABC):
             self._reduce_lookaheads,
         )
         goto = _build_goto_table(grammar, transitions)
-        return Automaton(goto, action)
+        return GeneratorResult(states=states, action_table=action, goto_table=goto)
+
+    def generate(self, grammar: Grammar) -> Automaton:
+        result = self.generate_tables(grammar)
+        return Automaton(result.goto_table, result.action_table)
 
     # --- Required overrides ---
 

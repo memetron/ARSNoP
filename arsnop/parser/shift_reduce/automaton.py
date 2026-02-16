@@ -3,6 +3,7 @@ import copy
 from ...lexer import Token
 from ..ast import AST
 from ..parsingEngine import ParsingEngine
+from .trace import ShiftReduceTrace, TraceAction, TraceStep
 from .types import GotoTable, ActionTable, Action
 
 
@@ -65,3 +66,71 @@ class Automaton(ParsingEngine):
                 return tree_stack[0]
 
         raise ValueError("Unexpected end of input")
+
+    def trace(self, stream: list[Token]) -> ShiftReduceTrace:
+        """Run shift-reduce parsing and record each step as a TraceStep."""
+        buffer = stream + [Token("$", "$")]
+        stack: list[int] = [0]
+        tree_stack: list[AST] = []
+        index = 0
+        steps: list[TraceStep] = []
+        step_num = 0
+
+        while index < len(buffer):
+            state = stack[-1]
+            curr_token = buffer[index]
+
+            try:
+                action: Action = self._action[state, curr_token.token]
+            except KeyError:
+                return ShiftReduceTrace(
+                    tokens=tuple(stream),
+                    steps=tuple(steps),
+                    ast=None,
+                    error=f"Unexpected token '{curr_token.lexeme}' ({curr_token.token}) at position {index}",
+                )
+
+            steps.append(TraceStep(
+                step=step_num,
+                stack=tuple(stack),
+                input_buffer=tuple(buffer[index:]),
+                action=_to_trace_action(action),
+            ))
+            step_num += 1
+
+            if action[0] == "shift":
+                tree_stack.append(AST(curr_token))
+                stack.append(action[1])
+                index += 1
+            elif action[0] == "reduce":
+                prod = action[1]
+                children: list[AST] = []
+                for _ in prod.rhs:
+                    stack.pop()
+                    children.append(tree_stack.pop())
+                tree_stack.append(AST(prod.lhs, list(reversed(copy.deepcopy(children)))))
+                stack.append(self._goto[(stack[-1], prod.lhs)])
+            elif action[0] == "accept":
+                ast = tree_stack[0] if tree_stack else None
+                return ShiftReduceTrace(
+                    tokens=tuple(stream),
+                    steps=tuple(steps),
+                    ast=ast,
+                )
+
+        return ShiftReduceTrace(
+            tokens=tuple(stream),
+            steps=tuple(steps),
+            ast=None,
+            error="Unexpected end of input",
+        )
+
+
+def _to_trace_action(action: Action) -> TraceAction:
+    """Convert an Action tuple to a TraceAction dataclass."""
+    if action[0] == "shift":
+        return TraceAction(type="shift", state=action[1])
+    elif action[0] == "reduce":
+        return TraceAction(type="reduce", production=action[1])
+    else:
+        return TraceAction(type="accept")

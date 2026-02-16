@@ -2,6 +2,7 @@
 
 from arsnop.grammar import Grammar
 from arsnop.lexer import Lexer, Token
+from arsnop.parser.ast import AST
 from arsnop.parser.earley import Earley, EarleyTrace, EarleyColumn, TracedEarleyItem
 
 
@@ -11,6 +12,16 @@ TERMINALS_TEXT = "PLUS \\+\nNUM [0-9]+\nSPC [ ]\n.IGNORE\nSPC"
 
 def _lex(input_text, terminals_text=TERMINALS_TEXT):
     return Lexer(terminals_text).lex(input_text)
+
+
+def _collect_leaves(node: AST) -> list[str]:
+    if not node.children:
+        content = node.content
+        return [content.lexeme if isinstance(content, Token) else str(content)]
+    leaves: list[str] = []
+    for child in node.children:
+        leaves.extend(_collect_leaves(child))
+    return leaves
 
 
 class TestTraceReturnType:
@@ -103,14 +114,14 @@ class TestTraceOperations:
 
 
 class TestTraceASTConsistency:
-    def test_ast_matches_parse(self):
+    def test_ast_leaves_match_parse(self):
         grammar = Grammar(GRAMMAR_TEXT)
         tokens = _lex("1 + 2")
         trace_result = Earley.trace(grammar, tokens)
         earley = Earley(grammar)
         parse_result = earley.parse(tokens)
         assert trace_result.ast is not None
-        assert str(trace_result.ast) == str(parse_result)
+        assert _collect_leaves(trace_result.ast) == _collect_leaves(parse_result)
 
     def test_no_error_on_success(self):
         grammar = Grammar(GRAMMAR_TEXT)

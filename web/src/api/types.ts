@@ -80,4 +80,24 @@ export interface ParseResult {
   error?: string;
 }
 
-export type ParserVariant = "lr0" | "slr" | "lr1" | "lalr" | "lalr_brute_force";
+export type ParserVariant = "earley" | "lr0" | "slr" | "lr1" | "lalr" | "lalr_brute_force";
+
+export interface EarleyItem {
+  production: Production;
+  dot: number;
+  origin: number;
+  operation: "init" | "predict" | "scan" | "complete";
+}
+
+export interface EarleyColumn {
+  index: number;
+  token: TokenInfo | null;
+  items: EarleyItem[];
+}
+
+export interface EarleyParseResult {
+  tokens: TokenInfo[];
+  chart: EarleyColumn[];
+  ast: ASTNodeOrToken | null;
+  error?: string;
+}

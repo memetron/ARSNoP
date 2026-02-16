@@ -1,6 +1,6 @@
 """Tests for shift-reduce state construction."""
-from src.grammar import Grammar
-from src.parser.shift_reduce import lr0_states, lr1_states
+from arsnop.grammar import Grammar
+from arsnop.parser.shift_reduce import lr0_states, lr1_states
 
 
 SIMPLE_GRAMMAR_TEXT = "start ::= expr\nexpr ::= TOK"

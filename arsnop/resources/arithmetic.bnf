@@ -1,0 +1,18 @@
+:GRAMMAR
+start ::= expr
+expr ::= expr PLUS term | expr MINUS term | term
+term ::= term MULT factor | term DIV factor | factor
+factor ::= NUM | OPEN_PAREN expr CLOSE_PAREN
+
+:TERMINALS
+NUM [0-9]+
+PLUS \+
+MINUS \-
+DIV \/
+MULT \*
+OPEN_PAREN \(
+CLOSE_PAREN \)
+SPC [ \t\n\r]+
+
+.IGNORE
+SPC

@@ -1,5 +1,5 @@
 """Tests for src/grammar/grammar.py."""
-from src.grammar import Grammar
+from arsnop.grammar import Grammar
 
 
 SIMPLE_GRAMMAR = "start ::= expr\nexpr ::= TOK"

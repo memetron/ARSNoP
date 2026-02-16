@@ -1,7 +1,7 @@
 """Tests for the LR(1) generator."""
-from src.grammar import Grammar, Production
-from src.parser.shift_reduce import LR1, Item
-from src.parser.shift_reduce.generators.closure import lr1_closure
+from arsnop.grammar import Grammar, Production
+from arsnop.parser.shift_reduce import LR1, Item
+from arsnop.parser.shift_reduce.generators.closure import lr1_closure
 
 from .conftest import (
     SIMPLE_GRAMMAR_TEXT,

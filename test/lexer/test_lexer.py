@@ -1,7 +1,7 @@
 """Tests for src/lexer/lexer.py."""
 import pytest
 
-from src.lexer import Lexer
+from arsnop.lexer import Lexer
 
 
 # Minimal terminal definition: standard terminals + .IGNORE section

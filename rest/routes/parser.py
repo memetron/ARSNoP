@@ -2,11 +2,11 @@ import re
 
 from flask import Blueprint, jsonify, request
 
-from src.grammar import Grammar
-from src.lexer import Lexer
-from src.parser.parser import _GRAMMAR_FORMAT
-from src.parser.shift_reduce import LR0, SLR, LR1, LALR, LALR_Brute_Force
-from src.parser.shift_reduce.generators.generator import (
+from arsnop.grammar import Grammar
+from arsnop.lexer import Lexer
+from arsnop.parser.parser import _GRAMMAR_FORMAT
+from arsnop.parser.shift_reduce import LR0, SLR, LR1, LALR, LALR_Brute_Force
+from arsnop.parser.shift_reduce.generators.generator import (
     _build_action_table,
     _build_goto_table,
 )
@@ -16,6 +16,7 @@ from ..serializers import (
     serialize_goto_table,
 )
 from ..tracer import traced_parse
+from ..earley_tracer import traced_earley_parse
 
 parser_bp = Blueprint("parser", __name__, url_prefix="/api/parse")
 
@@ -42,6 +43,12 @@ def generate_tables():
     data = request.get_json(force=True)
     grammar_text = data.get("grammar", "")
     variant = data.get("variant", "lr0")
+
+    if variant == "earley":
+        return jsonify({
+            "error": "invalid_variant",
+            "message": "Earley parser does not use precomputed tables. Use the parse endpoint instead.",
+        }), 400
 
     if variant not in _GENERATORS:
         return jsonify({
@@ -80,10 +87,11 @@ def execute_parse():
     variant = data.get("variant", "lr0")
     input_text = data.get("input", "")
 
-    if variant not in _GENERATORS:
+    all_variants = ["earley"] + list(_GENERATORS.keys())
+    if variant not in all_variants:
         return jsonify({
             "error": "invalid_variant",
-            "message": f"Unknown parser variant '{variant}'. Options: {list(_GENERATORS.keys())}",
+            "message": f"Unknown parser variant '{variant}'. Options: {all_variants}",
         }), 400
 
     try:
@@ -102,6 +110,13 @@ def execute_parse():
         tokens = lexer.lex(input_text)
     except Exception as e:
         return jsonify({"error": "lex_error", "message": str(e)}), 400
+
+    if variant == "earley":
+        try:
+            result = traced_earley_parse(grammar, tokens)
+        except Exception as e:
+            return jsonify({"error": "parse_error", "message": str(e)}), 400
+        return jsonify(result)
 
     try:
         gen = _GENERATORS[variant]()

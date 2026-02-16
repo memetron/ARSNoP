@@ -1,7 +1,7 @@
 """Tests for src/transformer/transformer.py."""
-from src.transformer import Transformer
-from src.parser import AST
-from src.lexer import Token
+from arsnop.transformer import Transformer
+from arsnop.parser import AST
+from arsnop.lexer import Token
 
 
 class TestTransformer:

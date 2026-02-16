@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.grammar import Production
-from src.lexer import Token
-from src.parser.ast import AST
-from src.parser.shift_reduce.state import Item, State
-from src.parser.shift_reduce.types import Action, ActionTable, GotoTable
+from arsnop.grammar import Production
+from arsnop.lexer import Token
+from arsnop.parser.ast import AST
+from arsnop.parser.shift_reduce.state import Item, State
+from arsnop.parser.shift_reduce.types import Action, ActionTable, GotoTable
 
 
 def serialize_production(prod: Production) -> dict[str, Any]:

@@ -1,7 +1,7 @@
 """Tests for the shared closure primitives."""
-from src.grammar import Grammar, Production
-from src.parser.shift_reduce.state import Item
-from src.parser.shift_reduce.generators.closure import (
+from arsnop.grammar import Grammar, Production
+from arsnop.parser.shift_reduce.state import Item
+from arsnop.parser.shift_reduce.generators.closure import (
     augmented_start,
     build_states,
     closure_step,

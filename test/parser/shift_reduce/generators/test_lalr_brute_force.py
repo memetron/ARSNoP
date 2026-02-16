@@ -1,6 +1,6 @@
 """Tests for the LALR(1) brute-force generator."""
-from src.grammar import Grammar
-from src.parser.shift_reduce import LALR_Brute_Force
+from arsnop.grammar import Grammar
+from arsnop.parser.shift_reduce import LALR_Brute_Force
 
 from .conftest import (
     SIMPLE_GRAMMAR_TEXT,

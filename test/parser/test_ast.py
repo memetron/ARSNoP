@@ -1,6 +1,6 @@
 """Tests for src/parser/ast.py."""
-from src.parser import AST, pretty_print
-from src.lexer import Token
+from arsnop.parser import AST, pretty_print
+from arsnop.lexer import Token
 
 
 class TestAST:

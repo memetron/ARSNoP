@@ -3,6 +3,7 @@ import { useAppStore } from "../store/useAppStore";
 import type { ParserVariant } from "../api/types";
 
 const variants: { value: ParserVariant; label: string }[] = [
+  { value: "earley", label: "Earley" },
   { value: "lr0", label: "LR(0)" },
   { value: "slr", label: "SLR(1)" },
   { value: "lr1", label: "LR(1)" },

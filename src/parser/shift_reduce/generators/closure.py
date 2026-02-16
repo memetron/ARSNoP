@@ -19,15 +19,28 @@ def closure_step(
     grammar: Grammar,
     lookaheadFn: LookaheadFn
 ) -> frozenset[Item]:
-    new_items = set(closure)
+    # Use (lhs, rhs_tuple, dot) as key to avoid Production object identity issues
+    core_map: dict[tuple[str, tuple[str, ...], int], set[str]] = {}
+    
+    for item in closure:
+        key = (item.production.lhs, tuple(item.production.rhs), item.dot)
+        core_map.setdefault(key, set()).update(item.lookahead)
+    
     for item in closure:
         if item.dot >= len(item.production.rhs):
             continue
         symbol = item.production.rhs[item.dot]
         if symbol in grammar.non_terminals:
             for new_prod in grammar.lookup_productions(symbol):
-                new_items.add(Item(new_prod, 0, lookaheadFn(item, grammar)))
-    return frozenset(new_items)
+                la = lookaheadFn(item, grammar)
+                key = (new_prod.lhs, tuple(new_prod.rhs), 0)
+                core_map.setdefault(key, set()).update(la)
+    
+    return frozenset(
+        Item(prod, dot, frozenset(la))
+        for (lhs, rhs_tuple, dot), la in core_map.items()
+        for prod in [Production(lhs, list(rhs_tuple))]
+    )
 
 
 def augmented_start(grammar: Grammar) -> Production:

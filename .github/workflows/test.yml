@@ -14,5 +14,5 @@ jobs:
           python-version: "3.12"
       - run: pip install pytest ruff pyright
       - run: python -m pytest test/ -v
-      - run: ruff check src/ test/
-      - run: pyright src/
+      - run: ruff check arsnop/ test/
+      - run: pyright arsnop/

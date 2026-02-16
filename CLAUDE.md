@@ -10,7 +10,7 @@ ARSNoP (A Roughly Sufficient Number of Parsers) is a pure Python parsing library
 
 ```bash
 # Run the example (TIM format parser)
-uv run -m src.example.main
+uv run -m arsnop.example.main
 ```
 
 Dependencies are listed in `pyproject.toml` (Python ≥3.12, Flask + Flask-CORS for the web demo).
@@ -63,14 +63,14 @@ WHITESPACE
 
 ## Linting
 
-- Ruff is used for linting. Run `uv run ruff check src/ test/` after making changes.
+- Ruff is used for linting. Run `uv run ruff check arsnop/ test/` after making changes.
 
 ## Typing
 
-- Pyright is configured in strict mode. All new and modified code must pass `uv run pyright src/` with 0 errors.
+- Pyright is configured in strict mode. All new and modified code must pass `uv run pyright arsnop/` with 0 errors.
 - Prefer concrete types over `Any`. Use `Any` only when the type is genuinely unconstrained (e.g., user-defined transformer return values).
-- Use type aliases (PEP 695 `type` syntax) to reduce verbosity when a complex type appears more than once. Existing aliases live in `src/parser/shift_reduce/types.py`.
-- Run `uv run pyright src/` after making changes to catch regressions.
+- Use type aliases (PEP 695 `type` syntax) to reduce verbosity when a complex type appears more than once. Existing aliases live in `arsnop/parser/shift_reduce/types.py`.
+- Run `uv run pyright arsnop/` after making changes to catch regressions.
 
 ## Code Style
 
@@ -104,7 +104,7 @@ make install-web
 A Flask backend that exposes the parsing library over HTTP:
 
 - **`app.py`** — Flask factory with CORS and blueprint registration.
-- **`grammar_store.py`** — Discovers/loads bundled `.bnf` files from `src/resources/`.
+- **`grammar_store.py`** — Discovers/loads bundled `.bnf` files from `arsnop/resources/`.
 - **`serializers.py`** — JSON serialization for domain objects (Production, Item, State, Action/Goto tables, Token, AST).
 - **`tracer.py`** — Trace-generating parse loop that mirrors `Automaton.parse()` but records each step.
 - **`routes/grammar.py`** — Grammar endpoints: list bundled, load bundled, analyze (FIRST/FOLLOW sets).

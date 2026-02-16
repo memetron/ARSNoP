@@ -4,6 +4,7 @@ import type {
   TablesResult,
   ParseResult,
   ParserVariant,
+  EarleyParseResult,
 } from "../api/types";
 import {
   fetchBundledList,
@@ -11,6 +12,7 @@ import {
   analyzeGrammar,
   generateTables,
   executeParse,
+  executeEarleyParse,
 } from "../api/client";
 
 interface AppState {
@@ -27,9 +29,11 @@ interface AppState {
   // Parse execution
   inputText: string;
   parseResult: ParseResult | null;
+  earleyResult: EarleyParseResult | null;
 
   // UI
   currentTraceStep: number;
+  currentChartColumn: number;
   loading: boolean;
   error: string | null;
 
@@ -38,6 +42,7 @@ interface AppState {
   setParserVariant: (variant: ParserVariant) => void;
   setInputText: (text: string) => void;
   setCurrentTraceStep: (step: number) => void;
+  setCurrentChartColumn: (col: number) => void;
 
   loadBundledList: () => Promise<void>;
   loadBundledGrammar: (name: string) => Promise<void>;
@@ -55,7 +60,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   tablesResult: null,
   inputText: "",
   parseResult: null,
+  earleyResult: null,
   currentTraceStep: 0,
+  currentChartColumn: 0,
   loading: false,
   error: null,
 
@@ -63,6 +70,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setParserVariant: (variant) => set({ parserVariant: variant }),
   setInputText: (text) => set({ inputText: text }),
   setCurrentTraceStep: (step) => set({ currentTraceStep: step }),
+  setCurrentChartColumn: (col) => set({ currentChartColumn: col }),
 
   loadBundledList: async () => {
     try {
@@ -82,6 +90,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         grammarAnalysis: null,
         tablesResult: null,
         parseResult: null,
+        earleyResult: null,
         loading: false,
       });
     } catch (e: unknown) {
@@ -123,13 +132,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { grammarText, parserVariant, inputText } = get();
     try {
       set({ loading: true, error: null });
-      const result = await executeParse(grammarText, parserVariant, inputText);
-      set({
-        parseResult: result,
-        currentTraceStep: 0,
-        loading: false,
-      });
-      navigate?.("/trace");
+      if (parserVariant === "earley") {
+        const result = await executeEarleyParse(grammarText, inputText);
+        set({
+          earleyResult: result,
+          parseResult: null,
+          currentChartColumn: 0,
+          loading: false,
+        });
+        navigate?.("/chart");
+      } else {
+        const result = await executeParse(grammarText, parserVariant, inputText);
+        set({
+          parseResult: result,
+          earleyResult: null,
+          currentTraceStep: 0,
+          loading: false,
+        });
+        navigate?.("/trace");
+      }
     } catch (e: unknown) {
       const msg =
         (e as { response?: { data?: { message?: string } } })?.response?.data

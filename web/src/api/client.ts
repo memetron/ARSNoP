@@ -4,6 +4,7 @@ import type {
   TablesResult,
   ParseResult,
   ParserVariant,
+  EarleyParseResult,
 } from "./types";
 
 const api = axios.create({ baseURL: "/api" });
@@ -50,6 +51,18 @@ export async function executeParse(
   const { data } = await api.post<ParseResult>("/parse/execute", {
     grammar,
     variant,
+    input,
+  });
+  return data;
+}
+
+export async function executeEarleyParse(
+  grammar: string,
+  input: string
+): Promise<EarleyParseResult> {
+  const { data } = await api.post<EarleyParseResult>("/parse/execute", {
+    grammar,
+    variant: "earley",
     input,
   });
   return data;

@@ -20,6 +20,7 @@ import StatesPage from "./pages/StatesPage";
 import TablesPage from "./pages/TablesPage";
 import TracePage from "./pages/TracePage";
 import ASTPage from "./pages/ASTPage";
+import ChartPage from "./pages/ChartPage";
 
 const theme = createTheme({
   palette: {
@@ -29,7 +30,7 @@ const theme = createTheme({
   },
 });
 
-const NAV_ITEMS = [
+const LR_NAV_ITEMS = [
   { label: "Grammar", path: "/grammar" },
   { label: "Grammar Info", path: "/grammar-info" },
   { label: "States", path: "/states" },
@@ -38,15 +39,25 @@ const NAV_ITEMS = [
   { label: "AST", path: "/ast" },
 ] as const;
 
+const EARLEY_NAV_ITEMS = [
+  { label: "Grammar", path: "/grammar" },
+  { label: "Grammar Info", path: "/grammar-info" },
+  { label: "Chart", path: "/chart" },
+  { label: "AST", path: "/ast" },
+] as const;
+
 export default function App() {
   const loading = useAppStore((s) => s.loading);
   const error = useAppStore((s) => s.error);
+  const parserVariant = useAppStore((s) => s.parserVariant);
   const location = useLocation();
 
+  const navItems = parserVariant === "earley" ? EARLEY_NAV_ITEMS : LR_NAV_ITEMS;
+
   const activeTab = useMemo(() => {
-    const idx = NAV_ITEMS.findIndex((item) => location.pathname === item.path);
+    const idx = navItems.findIndex((item) => location.pathname === item.path);
     return idx >= 0 ? idx : 0;
-  }, [location.pathname]);
+  }, [location.pathname, navItems]);
 
   return (
     <ThemeProvider theme={theme}>
@@ -57,7 +68,7 @@ export default function App() {
             ARSNoP Demo
           </Typography>
           <Typography variant="body2" sx={{ opacity: 0.8, mr: 4 }}>
-            Interactive LR Parser Visualizer
+            Interactive Parser Visualizer
           </Typography>
           <Tabs
             value={activeTab}
@@ -65,7 +76,7 @@ export default function App() {
             indicatorColor="secondary"
             sx={{ ml: "auto" }}
           >
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <Tab
                 key={item.path}
                 label={item.label}
@@ -90,6 +101,7 @@ export default function App() {
           <Route path="/states" element={<StatesPage />} />
           <Route path="/tables" element={<TablesPage />} />
           <Route path="/trace" element={<TracePage />} />
+          <Route path="/chart" element={<ChartPage />} />
           <Route path="/ast" element={<ASTPage />} />
           <Route path="*" element={<Navigate to="/grammar" replace />} />
         </Routes>

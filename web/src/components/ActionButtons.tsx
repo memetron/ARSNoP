@@ -7,6 +7,7 @@ export default function ActionButtons() {
   const doGenerateTables = useAppStore((s) => s.doGenerateTables);
   const doParse = useAppStore((s) => s.doParse);
   const loading = useAppStore((s) => s.loading);
+  const parserVariant = useAppStore((s) => s.parserVariant);
   const navigate = useNavigate();
 
   return (
@@ -18,13 +19,15 @@ export default function ActionButtons() {
       >
         Analyze
       </Button>
-      <Button
-        variant="contained"
-        onClick={() => doGenerateTables(navigate)}
-        disabled={loading}
-      >
-        Generate Tables
-      </Button>
+      {parserVariant !== "earley" && (
+        <Button
+          variant="contained"
+          onClick={() => doGenerateTables(navigate)}
+          disabled={loading}
+        >
+          Generate Tables
+        </Button>
+      )}
       <Button
         variant="contained"
         color="secondary"

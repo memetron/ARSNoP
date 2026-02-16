@@ -34,12 +34,16 @@ function renderNode(node: ASTNodeOrToken, id: string): React.ReactNode {
 
 export default function ASTView() {
   const parseResult = useAppStore((s) => s.parseResult);
+  const earleyResult = useAppStore((s) => s.earleyResult);
 
-  if (!parseResult?.ast) {
+  const ast = parseResult?.ast ?? earleyResult?.ast ?? null;
+  const error = parseResult?.error ?? earleyResult?.error;
+
+  if (!ast) {
     return (
       <Typography color="text.secondary">
-        {parseResult?.error
-          ? `Parse error: ${parseResult.error}`
+        {error
+          ? `Parse error: ${error}`
           : 'Click "Parse" to see the AST.'}
       </Typography>
     );
@@ -47,7 +51,7 @@ export default function ASTView() {
 
   return (
     <SimpleTreeView defaultExpandedItems={["root"]}>
-      {renderNode(parseResult.ast, "root")}
+      {renderNode(ast, "root")}
     </SimpleTreeView>
   );
 }

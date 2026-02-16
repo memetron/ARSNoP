@@ -20,23 +20,24 @@ def closure_step(
     lookaheadFn: LookaheadFn
 ) -> frozenset[Item]:
     """Expand closure by one step, merging lookaheads for identical (production, dot) cores."""
-    core_map: dict[tuple[Production, int], set[str]] = {}
+    lookaheads_dict: dict[Item, set[str]] = {}
 
     for item in closure:
-        core_map.setdefault((item.production, item.dot), set()).update(item.lookahead)
+        lookaheads_dict.setdefault(item.without_lookahead(), set()).update(item.lookahead)
 
     for item in closure:
-        if item.dot >= len(item.production.rhs):
+        if item.is_complete():
             continue
         symbol = item.production.rhs[item.dot]
         if symbol in grammar.non_terminals:
             for new_prod in grammar.lookup_productions(symbol):
                 la = lookaheadFn(item, grammar)
-                core_map.setdefault((new_prod, 0), set()).update(la)
+                new_item: Item = Item(new_prod, 0)
+                lookaheads_dict.setdefault(new_item, set()).update(la)
 
     return frozenset(
-        Item(prod, dot, frozenset(la))
-        for (prod, dot), la in core_map.items()
+        item.with_lookahead(frozenset(la))
+        for item, la in lookaheads_dict.items()
     )
 
 

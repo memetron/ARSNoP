@@ -21,7 +21,14 @@ class Item:
     def is_complete(self) -> bool:
         """Checks if the item is complete (dot at the end of the production)."""
         return self.dot == len(self.production.rhs)
-
+    
+    def without_lookahead(self) -> Item:
+        """Returns a new item without lookahead (for LR(0) items)."""
+        return Item(self.production, self.dot)
+    
+    def with_lookahead(self, lookahead: frozenset[str]) -> Item:
+        """Returns a new item with the specified lookahead."""
+        return Item(self.production, self.dot, lookahead)
 
 @dataclass(frozen=True)
 class State:

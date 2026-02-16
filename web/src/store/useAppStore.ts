@@ -30,7 +30,6 @@ interface AppState {
 
   // UI
   currentTraceStep: number;
-  activeTab: number;
   loading: boolean;
   error: string | null;
 
@@ -39,13 +38,12 @@ interface AppState {
   setParserVariant: (variant: ParserVariant) => void;
   setInputText: (text: string) => void;
   setCurrentTraceStep: (step: number) => void;
-  setActiveTab: (tab: number) => void;
 
   loadBundledList: () => Promise<void>;
   loadBundledGrammar: (name: string) => Promise<void>;
-  doAnalyze: () => Promise<void>;
-  doGenerateTables: () => Promise<void>;
-  doParse: () => Promise<void>;
+  doAnalyze: (navigate?: (path: string) => void) => Promise<void>;
+  doGenerateTables: (navigate?: (path: string) => void) => Promise<void>;
+  doParse: (navigate?: (path: string) => void) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -58,7 +56,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   inputText: "",
   parseResult: null,
   currentTraceStep: 0,
-  activeTab: 0,
   loading: false,
   error: null,
 
@@ -66,7 +63,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   setParserVariant: (variant) => set({ parserVariant: variant }),
   setInputText: (text) => set({ inputText: text }),
   setCurrentTraceStep: (step) => set({ currentTraceStep: step }),
-  setActiveTab: (tab) => set({ activeTab: tab }),
 
   loadBundledList: async () => {
     try {
@@ -93,12 +89,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  doAnalyze: async () => {
+  doAnalyze: async (navigate) => {
     const { grammarText } = get();
     try {
       set({ loading: true, error: null });
       const analysis = await analyzeGrammar(grammarText);
-      set({ grammarAnalysis: analysis, activeTab: 0, loading: false });
+      set({ grammarAnalysis: analysis, loading: false });
+      navigate?.("/grammar-info");
     } catch (e: unknown) {
       const msg =
         (e as { response?: { data?: { message?: string } } })?.response?.data
@@ -107,12 +104,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  doGenerateTables: async () => {
+  doGenerateTables: async (navigate) => {
     const { grammarText, parserVariant } = get();
     try {
       set({ loading: true, error: null });
       const tables = await generateTables(grammarText, parserVariant);
-      set({ tablesResult: tables, activeTab: 1, loading: false });
+      set({ tablesResult: tables, loading: false });
+      navigate?.("/states");
     } catch (e: unknown) {
       const msg =
         (e as { response?: { data?: { message?: string } } })?.response?.data
@@ -121,7 +119,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  doParse: async () => {
+  doParse: async (navigate) => {
     const { grammarText, parserVariant, inputText } = get();
     try {
       set({ loading: true, error: null });
@@ -129,9 +127,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({
         parseResult: result,
         currentTraceStep: 0,
-        activeTab: 3,
         loading: false,
       });
+      navigate?.("/trace");
     } catch (e: unknown) {
       const msg =
         (e as { response?: { data?: { message?: string } } })?.response?.data

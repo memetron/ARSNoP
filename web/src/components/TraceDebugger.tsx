@@ -35,6 +35,7 @@ export default function TraceDebugger() {
 
   const maxStep = parseResult.trace.length - 1;
   const step = parseResult.trace[currentTraceStep];
+  const currentState = step.stack[step.stack.length - 1];
 
   return (
     <Stack spacing={2}>
@@ -69,6 +70,18 @@ export default function TraceDebugger() {
         </Typography>
       </Stack>
 
+      {/* Current State */}
+      <Box>
+        <Typography variant="subtitle2" gutterBottom>
+          Current State
+        </Typography>
+        <Chip
+          label={`State ${currentState}`}
+          color="info"
+          sx={{ fontWeight: "bold", fontSize: "0.9rem" }}
+        />
+      </Box>
+
       {/* Stack */}
       <Box>
         <Typography variant="subtitle2" gutterBottom>
@@ -76,7 +89,13 @@ export default function TraceDebugger() {
         </Typography>
         <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
           {step.stack.map((s, i) => (
-            <Chip key={i} label={s} size="small" variant="outlined" />
+            <Chip
+              key={i}
+              label={s}
+              size="small"
+              variant={i === step.stack.length - 1 ? "filled" : "outlined"}
+              color={i === step.stack.length - 1 ? "info" : "default"}
+            />
           ))}
         </Stack>
       </Box>

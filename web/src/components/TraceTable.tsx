@@ -39,6 +39,7 @@ export default function TraceTable() {
         <TableHead>
           <TableRow>
             <TableCell>Step</TableCell>
+            <TableCell>State</TableCell>
             <TableCell>Stack</TableCell>
             <TableCell>Input Buffer</TableCell>
             <TableCell>Action</TableCell>
@@ -54,6 +55,9 @@ export default function TraceTable() {
               sx={{ cursor: "pointer" }}
             >
               <TableCell>{step.step}</TableCell>
+              <TableCell sx={{ fontFamily: "monospace", fontSize: "0.8rem", fontWeight: "bold" }}>
+                {step.stack[step.stack.length - 1]}
+              </TableCell>
               <TableCell sx={{ fontFamily: "monospace", fontSize: "0.8rem" }}>
                 [{step.stack.join(", ")}]
               </TableCell>

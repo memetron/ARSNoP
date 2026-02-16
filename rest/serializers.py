@@ -7,7 +7,9 @@ from typing import Any
 from arsnop.grammar import Production
 from arsnop.lexer import Token
 from arsnop.parser.ast import AST
+from arsnop.parser.earley.trace import EarleyTrace
 from arsnop.parser.shift_reduce.state import Item, State
+from arsnop.parser.shift_reduce.trace import ShiftReduceTrace, TraceAction, TraceStep
 from arsnop.parser.shift_reduce.types import Action, ActionTable, GotoTable
 
 
@@ -88,3 +90,61 @@ def serialize_ast(node: AST) -> dict[str, Any]:
             "token": str(content),
             "lexeme": str(content),
         }
+
+
+def serialize_trace_action(action: TraceAction) -> dict[str, Any]:
+    result: dict[str, Any] = {"type": action.type}
+    if action.state is not None:
+        result["state"] = action.state
+    if action.production is not None:
+        result["production"] = serialize_production(action.production)
+    return result
+
+
+def serialize_trace_step(step: TraceStep) -> dict[str, Any]:
+    return {
+        "step": step.step,
+        "stack": list(step.stack),
+        "inputBuffer": [serialize_token(t) for t in step.input_buffer],
+        "action": serialize_trace_action(step.action),
+    }
+
+
+def serialize_shift_reduce_trace(trace: ShiftReduceTrace) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "tokens": [serialize_token(t) for t in trace.tokens],
+        "trace": [serialize_trace_step(s) for s in trace.steps],
+        "ast": serialize_ast(trace.ast) if trace.ast else None,
+    }
+    if trace.error is not None:
+        result["error"] = trace.error
+    return result
+
+
+def serialize_earley_trace(trace: EarleyTrace) -> dict[str, Any]:
+    serialized_chart: list[dict[str, Any]] = []
+    for col in trace.chart:
+        token_dict: dict[str, str] | None = None
+        if col.token is not None:
+            token_dict = serialize_token(col.token)
+        serialized_chart.append({
+            "index": col.index,
+            "token": token_dict,
+            "items": [
+                {
+                    "production": serialize_production(it.production),
+                    "dot": it.dot,
+                    "origin": it.origin,
+                    "operation": it.operation,
+                }
+                for it in col.items
+            ],
+        })
+    result: dict[str, Any] = {
+        "tokens": [serialize_token(t) for t in trace.tokens],
+        "chart": serialized_chart,
+        "ast": serialize_ast(trace.ast) if trace.ast else None,
+    }
+    if trace.error is not None:
+        result["error"] = trace.error
+    return result

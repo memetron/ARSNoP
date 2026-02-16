@@ -1,9 +1,7 @@
-import re
-
 from flask import Blueprint, jsonify, request
 
 from arsnop.grammar import Grammar
-from arsnop.parser.parser import _GRAMMAR_FORMAT
+from arsnop.parser import parse_grammar_text
 from ..grammar_store import list_bundled, load_bundled
 from ..serializers import serialize_production
 
@@ -29,14 +27,13 @@ def analyze_grammar():
     data = request.get_json(force=True)
     grammar_text = data.get("grammar", "")
 
-    match = re.match(_GRAMMAR_FORMAT, grammar_text)
-    if not match:
+    try:
+        grammar_section, _ = parse_grammar_text(grammar_text)
+    except ValueError:
         return jsonify({
             "error": "invalid_format",
             "message": "Grammar must contain :GRAMMAR and :TERMINALS sections",
         }), 400
-
-    grammar_section, terminals_section = match.groups()
 
     try:
         grammar = Grammar(grammar_section)

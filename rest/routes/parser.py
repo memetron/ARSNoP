@@ -1,22 +1,18 @@
-import re
-
 from flask import Blueprint, jsonify, request
 
 from arsnop.grammar import Grammar
 from arsnop.lexer import Lexer
-from arsnop.parser.parser import _GRAMMAR_FORMAT
+from arsnop.parser import parse_grammar_text
+from arsnop.parser.earley import Earley
 from arsnop.parser.shift_reduce import LR0, SLR, LR1, LALR, LALR_Brute_Force
-from arsnop.parser.shift_reduce.generators.generator import (
-    _build_action_table,
-    _build_goto_table,
-)
+from arsnop.parser.shift_reduce.automaton import Automaton
 from ..serializers import (
     serialize_state,
     serialize_action_table,
     serialize_goto_table,
+    serialize_shift_reduce_trace,
+    serialize_earley_trace,
 )
-from ..tracer import traced_parse
-from ..earley_tracer import traced_earley_parse
 
 parser_bp = Blueprint("parser", __name__, url_prefix="/api/parse")
 
@@ -29,12 +25,9 @@ _GENERATORS = {
 }
 
 
-def _parse_grammar_text(grammar_text):
-    """Parse grammar text and return (Grammar, terminals_section) or raise ValueError."""
-    match = re.match(_GRAMMAR_FORMAT, grammar_text)
-    if not match:
-        raise ValueError("Grammar must contain :GRAMMAR and :TERMINALS sections")
-    grammar_section, terminals_section = match.groups()
+def _load_grammar(grammar_text):
+    """Parse grammar text and return (Grammar, terminals_section) or raise."""
+    grammar_section, terminals_section = parse_grammar_text(grammar_text)
     return Grammar(grammar_section), terminals_section
 
 
@@ -57,26 +50,21 @@ def generate_tables():
         }), 400
 
     try:
-        grammar, _ = _parse_grammar_text(grammar_text)
+        grammar, _ = _load_grammar(grammar_text)
     except ValueError as e:
         return jsonify({"error": "invalid_format", "message": str(e)}), 400
     except Exception as e:
         return jsonify({"error": "grammar_error", "message": str(e)}), 400
 
     try:
-        gen = _GENERATORS[variant]()
-        states, transitions = gen._build_states(grammar)
-        action = _build_action_table(
-            grammar, states, transitions, gen._reduce_lookaheads,
-        )
-        goto = _build_goto_table(grammar, transitions)
+        result = _GENERATORS[variant]().generate_tables(grammar)
     except Exception as e:
         return jsonify({"error": "table_error", "message": str(e)}), 400
 
     return jsonify({
-        "states": [serialize_state(i, s) for i, s in enumerate(states)],
-        "actionTable": serialize_action_table(action),
-        "gotoTable": serialize_goto_table(goto),
+        "states": [serialize_state(i, s) for i, s in enumerate(result.states)],
+        "actionTable": serialize_action_table(result.action_table),
+        "gotoTable": serialize_goto_table(result.goto_table),
     })
 
 
@@ -95,7 +83,7 @@ def execute_parse():
         }), 400
 
     try:
-        grammar, terminals_section = _parse_grammar_text(grammar_text)
+        grammar, terminals_section = _load_grammar(grammar_text)
     except ValueError as e:
         return jsonify({"error": "invalid_format", "message": str(e)}), 400
     except Exception as e:
@@ -113,20 +101,16 @@ def execute_parse():
 
     if variant == "earley":
         try:
-            result = traced_earley_parse(grammar, tokens)
+            trace = Earley.trace(grammar, tokens)
         except Exception as e:
             return jsonify({"error": "parse_error", "message": str(e)}), 400
-        return jsonify(result)
+        return jsonify(serialize_earley_trace(trace))
 
     try:
-        gen = _GENERATORS[variant]()
-        states, transitions = gen._build_states(grammar)
-        action = _build_action_table(
-            grammar, states, transitions, gen._reduce_lookaheads,
-        )
-        goto = _build_goto_table(grammar, transitions)
+        result = _GENERATORS[variant]().generate_tables(grammar)
     except Exception as e:
         return jsonify({"error": "table_error", "message": str(e)}), 400
 
-    result = traced_parse(action, goto, tokens)
-    return jsonify(result)
+    automaton = Automaton(result.goto_table, result.action_table)
+    trace = automaton.trace(tokens)
+    return jsonify(serialize_shift_reduce_trace(trace))

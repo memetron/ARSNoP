@@ -38,7 +38,7 @@ class TestEpsilonInLookahead:
     def test_lr1_closure_no_epsilon_in_lookahead(self):
         """LR1 closure should never produce items with '' in their lookahead."""
         grammar = Grammar(NULLABLE_GRAMMAR_TEXT)
-        start_prod = Production("S'", [grammar.start_symbol])
+        start_prod = Production("S'", (grammar.start_symbol,))
         items = lr1_closure(
             grammar,
             [Item(start_prod, 0, frozenset({"$"}))]

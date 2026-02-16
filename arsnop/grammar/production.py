@@ -1,28 +1,17 @@
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
 class Production:
     """
-    A class to represent a production rule in a context-free grammar.
+    A production rule in a context-free grammar.
     Attributes:
-        lhs (str): The left-hand side of the production rule, which must be a non-terminal.
-        rhs (list[str]): The right-hand side of the production rule, which is a list of symbols (terminals or non-terminals).
+        lhs: The left-hand side non-terminal.
+        rhs: The right-hand side symbols (terminals or non-terminals).
     """
 
-    def __init__(self, lhs: str, rhs: list[str]) -> None:
-        """
-        Initializes a production rule with a left-hand side and a right-hand side.
-        Args:
-            lhs (str): The non-terminal on the left-hand side of the production rule.
-            rhs (list[str]): A list of symbols on the right-hand side of the production rule.
-        """
-        self.lhs = lhs
-        self.rhs = rhs
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Production):
-            return NotImplemented
-        return self.lhs == other.lhs and self.rhs == other.rhs
-
-    def __hash__(self) -> int:
-        return hash((self.lhs, tuple(self.rhs)))
+    lhs: str
+    rhs: tuple[str, ...]
 
     def __str__(self) -> str:
         return f"{self.lhs} ::= {' '.join(self.rhs)}"

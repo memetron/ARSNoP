@@ -17,5 +17,5 @@ def print_states(states: list[State]) -> None:
     for index, state in enumerate(states):
         print(f"STATE_{index}:")
         for item in state.items:
-            production = f"{item.production.lhs} ::= {' '.join(item.production.rhs[:item.dot] + ['.'] + item.production.rhs[item.dot:])} ({str(list(item.lookahead))})"
+            production = f"{item.production.lhs} ::= {' '.join(item.production.rhs[:item.dot] + ('.',) + item.production.rhs[item.dot:])} ({str(list(item.lookahead))})"
             print(f"\t{production}")

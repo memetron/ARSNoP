@@ -35,9 +35,9 @@ class TestFlatten:
 
 class TestPrintStates:
     def test_single_state(self):
-        prod = Production("start", ["expr"])
+        prod = Production("start", ("expr",))
         item = Item(prod, 0, frozenset({"$"}))
-        state = State([item])
+        state = State(frozenset([item]))
         f = io.StringIO()
         with contextlib.redirect_stdout(f):
             print_states([state])
@@ -46,10 +46,10 @@ class TestPrintStates:
         assert "start" in output
 
     def test_multiple_states(self):
-        prod1 = Production("start", ["expr"])
-        prod2 = Production("expr", ["TOK"])
-        state0 = State([Item(prod1, 0, frozenset({"$"}))])
-        state1 = State([Item(prod2, 0, frozenset({"$"}))])
+        prod1 = Production("start", ("expr",))
+        prod2 = Production("expr", ("TOK",))
+        state0 = State(frozenset([Item(prod1, 0, frozenset({"$"}))]))
+        state1 = State(frozenset([Item(prod2, 0, frozenset({"$"}))]))
         f = io.StringIO()
         with contextlib.redirect_stdout(f):
             print_states([state0, state1])

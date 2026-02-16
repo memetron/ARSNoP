@@ -59,7 +59,7 @@ class TestLookupProductions:
         prods = g.lookup_productions("start")
         assert len(prods) == 1
         assert prods[0].lhs == "start"
-        assert prods[0].rhs == ["expr"]
+        assert prods[0].rhs == ("expr",)
 
     def test_lookup_multiple(self):
         g = Grammar(ARITH_GRAMMAR)

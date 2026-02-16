@@ -57,7 +57,7 @@ class Grammar:
 
                 rule_parts = [r.split() for r in rule_definitions.split('|')]
                 for rule_part in rule_parts:
-                    self.productions.append(Production(non_terminal, rule_part))
+                    self.productions.append(Production(non_terminal, tuple(rule_part)))
                     for symbol in rule_part:
                         self.terminals.add(symbol)
 
@@ -83,7 +83,7 @@ class Grammar:
         Returns:
             bool: True if the non-terminal can derive ε, otherwise False.
         """
-        return any(p.rhs == [] for p in self.lookup_productions(non_terminal))
+        return any(p.rhs == () for p in self.lookup_productions(non_terminal))
 
     def first(self, symbol: str) -> set[str]:
         """

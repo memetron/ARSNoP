@@ -4,20 +4,20 @@ from arsnop.grammar import Production
 
 class TestProduction:
     def test_init(self):
-        p = Production("A", ["B", "C"])
+        p = Production("A", ("B", "C"))
         assert p.lhs == "A"
-        assert p.rhs == ["B", "C"]
+        assert p.rhs == ("B", "C")
 
     def test_str(self):
-        p = Production("expr", ["NUM", "OP", "NUM"])
+        p = Production("expr", ("NUM", "OP", "NUM"))
         assert str(p) == "expr ::= NUM OP NUM"
 
     def test_empty_rhs(self):
-        p = Production("A", [])
+        p = Production("A", ())
         assert p.lhs == "A"
-        assert p.rhs == []
+        assert p.rhs == ()
         assert str(p) == "A ::= "
 
     def test_single_symbol_rhs(self):
-        p = Production("start", ["expr"])
+        p = Production("start", ("expr",))
         assert str(p) == "start ::= expr"

@@ -24,13 +24,13 @@ class TestAugmentedStart:
 
     def test_rhs_is_start_symbol(self):
         prod = augmented_start(GRAMMAR)
-        assert prod.rhs == [GRAMMAR.start_symbol]
+        assert prod.rhs == (GRAMMAR.start_symbol,)
 
 
 class TestClosureStep:
     def test_expands_non_terminal(self):
         """closure_step should add productions for the symbol after the dot."""
-        start = Production("S'", ["start"])
+        start = Production("S'", ("start",))
         initial = frozenset([Item(start, 0)])
         result = closure_step(initial, GRAMMAR, lambda _i, _g: frozenset())
         prods = {item.production.lhs for item in result}
@@ -39,14 +39,14 @@ class TestClosureStep:
 
     def test_no_expansion_for_terminal(self):
         """Items whose dot is before a terminal should not expand."""
-        tok_prod = Production("expr", ["TOK"])
+        tok_prod = Production("expr", ("TOK",))
         initial = frozenset([Item(tok_prod, 0)])
         result = closure_step(initial, GRAMMAR, lambda _i, _g: frozenset())
         assert result == initial
 
     def test_complete_item_unchanged(self):
         """An item with the dot at the end should not cause expansion."""
-        prod = Production("expr", ["TOK"])
+        prod = Production("expr", ("TOK",))
         complete = Item(prod, 1)
         initial = frozenset([complete])
         result = closure_step(initial, GRAMMAR, lambda _i, _g: frozenset())
@@ -73,7 +73,7 @@ class TestLr1Lookahead:
         # start ::= A B c; at dot=0 remainder is [B, c]
         # FIRST(B) = {b, ε} → b added, B nullable so continue
         # FIRST(c) = {c} → c added, not nullable so stop
-        prod = Production("start", ["A", "B", "c"])
+        prod = Production("start", ("A", "B", "c"))
         item = Item(prod, 0, frozenset({"$"}))
         la = lr1_lookahead(item, NULLABLE)
         assert la == frozenset({"b", "c"})
@@ -82,7 +82,7 @@ class TestLr1Lookahead:
         """When the entire remainder is nullable, the item's own lookahead propagates."""
         # start ::= A B c, with dot=0, remainder=[B, c]
         # But let's use a production where remainder is empty
-        prod = Production("expr", ["TOK"])
+        prod = Production("expr", ("TOK",))
         item = Item(prod, 0, frozenset({"$"}))
         la = lr1_lookahead(item, GRAMMAR)
         # remainder is empty → falls through to item.lookahead
@@ -90,7 +90,7 @@ class TestLr1Lookahead:
 
     def test_no_epsilon_in_result(self):
         """lr1_lookahead should never return epsilon."""
-        prod = Production("start", ["A", "B", "c"])
+        prod = Production("start", ("A", "B", "c"))
         item = Item(prod, 0, frozenset({"$"}))
         la = lr1_lookahead(item, NULLABLE)
         assert "" not in la
@@ -112,20 +112,20 @@ class TestLr1Closure:
 
 class TestSuccessor:
     def test_advances_matching_items(self):
-        prod = Production("expr", ["TOK"])
+        prod = Production("expr", ("TOK",))
         items = [Item(prod, 0)]
         result = successor(GRAMMAR, items, "TOK", lr0_closure)
         dots = {item.dot for item in result if item.production == prod}
         assert 1 in dots
 
     def test_returns_empty_for_non_matching_symbol(self):
-        prod = Production("expr", ["TOK"])
+        prod = Production("expr", ("TOK",))
         items = [Item(prod, 0)]
         result = successor(GRAMMAR, items, "NOMATCH", lr0_closure)
         assert result == frozenset()
 
     def test_preserves_lookahead(self):
-        prod = Production("expr", ["TOK"])
+        prod = Production("expr", ("TOK",))
         la = frozenset({"$"})
         items = [Item(prod, 0, la)]
         result = successor(GRAMMAR, items, "TOK", lr1_closure)

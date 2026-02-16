@@ -19,13 +19,12 @@ def closure_step(
     grammar: Grammar,
     lookaheadFn: LookaheadFn
 ) -> frozenset[Item]:
-    # Use (lhs, rhs_tuple, dot) as key to avoid Production object identity issues
-    core_map: dict[tuple[str, tuple[str, ...], int], set[str]] = {}
-    
+    """Expand closure by one step, merging lookaheads for identical (production, dot) cores."""
+    core_map: dict[tuple[Production, int], set[str]] = {}
+
     for item in closure:
-        key = (item.production.lhs, tuple(item.production.rhs), item.dot)
-        core_map.setdefault(key, set()).update(item.lookahead)
-    
+        core_map.setdefault((item.production, item.dot), set()).update(item.lookahead)
+
     for item in closure:
         if item.dot >= len(item.production.rhs):
             continue
@@ -33,19 +32,17 @@ def closure_step(
         if symbol in grammar.non_terminals:
             for new_prod in grammar.lookup_productions(symbol):
                 la = lookaheadFn(item, grammar)
-                key = (new_prod.lhs, tuple(new_prod.rhs), 0)
-                core_map.setdefault(key, set()).update(la)
-    
+                core_map.setdefault((new_prod, 0), set()).update(la)
+
     return frozenset(
         Item(prod, dot, frozenset(la))
-        for (lhs, rhs_tuple, dot), la in core_map.items()
-        for prod in [Production(lhs, list(rhs_tuple))]
+        for (prod, dot), la in core_map.items()
     )
 
 
 def augmented_start(grammar: Grammar) -> Production:
     """Return the augmented start production S' -> start_symbol."""
-    return Production("S'", [grammar.start_symbol])
+    return Production("S'", (grammar.start_symbol,))
 
 
 def lr1_lookahead(item: Item, grammar: Grammar) -> frozenset[str]:

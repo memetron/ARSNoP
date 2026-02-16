@@ -1,7 +1,7 @@
 """Tests for the parser.parser module (from_file factory)."""
 import pytest
 
-from src.parser import from_file
+from arsnop.parser import from_file
 
 
 def _collect_nonterminals(ast):

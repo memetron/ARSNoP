@@ -2,11 +2,11 @@ import re
 
 from flask import Blueprint, jsonify, request
 
-from src.grammar import Grammar
-from src.lexer import Lexer
-from src.parser.parser import _GRAMMAR_FORMAT
-from src.parser.shift_reduce import LR0, SLR, LR1, LALR, LALR_Brute_Force
-from src.parser.shift_reduce.generators.generator import (
+from arsnop.grammar import Grammar
+from arsnop.lexer import Lexer
+from arsnop.parser.parser import _GRAMMAR_FORMAT
+from arsnop.parser.shift_reduce import LR0, SLR, LR1, LALR, LALR_Brute_Force
+from arsnop.parser.shift_reduce.generators.generator import (
     _build_action_table,
     _build_goto_table,
 )

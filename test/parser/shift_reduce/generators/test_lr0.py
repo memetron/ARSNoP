@@ -2,8 +2,8 @@
 import io
 import contextlib
 
-from src.grammar import Grammar
-from src.parser.shift_reduce import LR0, SLR, lr0_states
+from arsnop.grammar import Grammar
+from arsnop.parser.shift_reduce import LR0, SLR, lr0_states
 
 from .conftest import (
     SIMPLE_GRAMMAR_TEXT,

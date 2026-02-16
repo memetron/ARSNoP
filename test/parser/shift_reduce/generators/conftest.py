@@ -1,6 +1,6 @@
 """Shared fixtures for shift-reduce generator tests."""
-from src.grammar import Grammar
-from src.lexer import Lexer, Token
+from arsnop.grammar import Grammar
+from arsnop.lexer import Lexer, Token
 
 
 SIMPLE_GRAMMAR_TEXT = "start ::= expr\nexpr ::= TOK"

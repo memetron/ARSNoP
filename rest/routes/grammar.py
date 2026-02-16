@@ -2,8 +2,8 @@ import re
 
 from flask import Blueprint, jsonify, request
 
-from src.grammar import Grammar
-from src.parser.parser import _GRAMMAR_FORMAT
+from arsnop.grammar import Grammar
+from arsnop.parser.parser import _GRAMMAR_FORMAT
 from ..grammar_store import list_bundled, load_bundled
 from ..serializers import serialize_production
 

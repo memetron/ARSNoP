@@ -1,8 +1,8 @@
 """Cross-generator consistency tests."""
-from src.grammar import Grammar
-from src.lexer import Lexer
-from src.parser.earley import Earley
-from src.parser.shift_reduce import SLR, LR1, LALR, LALR_Brute_Force
+from arsnop.grammar import Grammar
+from arsnop.lexer import Lexer
+from arsnop.parser.earley import Earley
+from arsnop.parser.shift_reduce import SLR, LR1, LALR, LALR_Brute_Force
 
 from .conftest import (
     NESTED_GRAMMAR_TEXT,

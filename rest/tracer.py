@@ -5,9 +5,9 @@ from __future__ import annotations
 import copy
 from typing import Any
 
-from src.lexer import Token
-from src.parser.ast import AST
-from src.parser.shift_reduce.types import ActionTable, GotoTable, Action
+from arsnop.lexer import Token
+from arsnop.parser.ast import AST
+from arsnop.parser.shift_reduce.types import ActionTable, GotoTable, Action
 from .serializers import serialize_production, serialize_token, serialize_ast
 
 

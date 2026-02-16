@@ -2,9 +2,9 @@
 import io
 import contextlib
 
-from src.utils import flatten, print_states
-from src.grammar import Production
-from src.parser.shift_reduce import Item, State
+from arsnop.utils import flatten, print_states
+from arsnop.grammar import Production
+from arsnop.parser.shift_reduce import Item, State
 
 
 class TestFlatten:

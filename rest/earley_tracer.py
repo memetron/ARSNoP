@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.grammar import Grammar, Production
-from src.lexer import Token
-from src.parser.ast import AST
+from arsnop.grammar import Grammar, Production
+from arsnop.lexer import Token
+from arsnop.parser.ast import AST
 from .serializers import serialize_production, serialize_token, serialize_ast
 
 

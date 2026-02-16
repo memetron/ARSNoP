@@ -1,9 +1,9 @@
 """Tests for the Earley parser."""
 import pytest
 
-from src.grammar import Grammar
-from src.lexer import Lexer, Token
-from src.parser.earley import Earley
+from arsnop.grammar import Grammar
+from arsnop.lexer import Lexer, Token
+from arsnop.parser.earley import Earley
 
 
 SIMPLE_GRAMMAR_TEXT = "start ::= expr\nexpr ::= TOK"

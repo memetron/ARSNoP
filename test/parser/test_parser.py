@@ -35,6 +35,11 @@ class TestFromFile:
         ast = parser.parse("the quick brown fox jumped over the lazy dog")
         assert ast is not None
 
+    def test_lalr_from_file_2(self):
+        parser = from_file("test/resources/arithmetic.bnf", parser="lalr")
+        ast = parser.parse("1 + ( 2 * 3 )")
+        assert ast is not None
+
     def test_lalr_brute_force_from_file(self):
         parser = from_file("test/resources/grammar.bnf", parser="lalr_brute_force")
         ast = parser.parse("the quick brown fox jumped over the lazy dog")

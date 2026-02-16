@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from .util import fixed_point
-
 from .closure import augmented_start, lr0_closure, lr1_closure, build_states
 from ....grammar import Grammar
 from ..generators.generator import Generator
@@ -29,6 +28,7 @@ def _init_lalr_tables(
     states: list[State],
     grammar: Grammar,
 ) -> tuple[LookaheadTable, PropagationGraph]:
+    """Initialize lookahead and propagation tables for all kernel items."""
     lookaheads: LookaheadTable = {}
     propagation: PropagationGraph = {}
     for i, state in enumerate(states):
@@ -40,6 +40,8 @@ def _init_lalr_tables(
     return lookaheads, propagation
 
 
+_DUMMY = '#'
+
 def _discover_lookaheads(
     states: list[State],
     transitions: GotoTable,
@@ -47,15 +49,20 @@ def _discover_lookaheads(
     lookaheads: LookaheadTable,
     propagation: PropagationGraph,
 ) -> None:
-    """Build propagation edges and compute immediate lookaheads for kernel items."""
+    """Compute spontaneous lookaheads and build propagation edges for kernel items.
+
+    Uses a dummy marker to distinguish spontaneous lookaheads (from FIRST of
+    following symbols) from propagated ones (dependent on the kernel item's
+    own lookahead).  See Dragon Book Algorithm 4.63.
+    """
     for i, state in enumerate(states):
         for prod, dot in state.get_kernel():
             kernel_key = (i, (prod, dot))
-            initial_items = [Item(prod, dot, frozenset(lookaheads[kernel_key]))]
+            initial_items = [Item(prod, dot, frozenset({_DUMMY}))]
             closure = lr1_closure(grammar, initial_items)
 
             for item in closure:
-                if item.dot >= len(item.production.rhs):
+                if item.is_complete():
                     continue
 
                 symbol = item.production.rhs[item.dot]
@@ -64,16 +71,20 @@ def _discover_lookaheads(
                     continue
 
                 target: KernelItem = (j, (item.production, item.dot + 1))
-                source: KernelItem = kernel_key
 
-                lookaheads[target].update(item.lookahead)
-                propagation[source].add(target)
+                lookaheads[target].update(item.lookahead - {_DUMMY})
+                if _DUMMY in item.lookahead:
+                    propagation[kernel_key].add(target)
+
 
 @fixed_point
 def _propagate_lookaheads(
     lookaheads: LookaheadTable,
     propagation: PropagationGraph,
 ) -> LookaheadTable:
+    """
+    Propagate lookaheads along edges until fixed point.
+    """
     new_lookaheads = {k: set(v) for k, v in lookaheads.items()}
     for source, targets in propagation.items():
         for target in targets:
@@ -86,6 +97,7 @@ def _build_lalr_states(
     grammar: Grammar,
     lookaheads: LookaheadTable,
 ) -> tuple[list[State], GotoTable]:
+    """Build final LALR(1) states by applying LR(1) closure with computed lookaheads."""
     lalr: list[State] = []
 
     for i, state in enumerate(states):

@@ -13,6 +13,25 @@ from ..transformer import Transformer
 # Regular expression to extract grammar and terminals from a text file
 _GRAMMAR_FORMAT = re.compile(r":GRAMMAR(.*):TERMINALS(.*)", re.DOTALL)
 
+
+def parse_grammar_text(text: str) -> tuple[str, str]:
+    """Extract the grammar and terminals sections from a grammar definition string.
+
+    Args:
+        text: A string containing :GRAMMAR and :TERMINALS sections.
+
+    Returns:
+        A (grammar_section, terminals_section) tuple of raw strings.
+
+    Raises:
+        ValueError: If the text does not contain the required sections.
+    """
+    match = re.match(_GRAMMAR_FORMAT, text)
+    if not match:
+        raise ValueError("Grammar text must contain :GRAMMAR and :TERMINALS sections")
+    return match.group(1), match.group(2)
+
+
 def from_file(file_path: str, parser: str = "earley", transformer: Transformer | None = None) -> 'Parser':
     """
     Creates a Parser instance from a grammar definition file.
@@ -49,12 +68,9 @@ def from_file(file_path: str, parser: str = "earley", transformer: Transformer |
     """
     with open(file_path, 'r') as file:
         text = file.read()
-    match = re.match(_GRAMMAR_FORMAT, text)
-    if not match:
-        raise ValueError("Grammar file must contain :GRAMMAR and :TERMINALS sections")
-    grammar, terminals = match.groups()
-    grammar = Grammar(grammar)
-    lexer = Lexer(terminals)
+    grammar_section, terminals_section = parse_grammar_text(text)
+    grammar = Grammar(grammar_section)
+    lexer = Lexer(terminals_section)
 
     if parser == "earley":
         generated = Earley(grammar)

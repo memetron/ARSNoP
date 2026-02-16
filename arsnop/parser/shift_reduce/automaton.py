@@ -3,57 +3,59 @@ import copy
 from ...lexer import Token
 from ..ast import AST
 from ..parsingEngine import ParsingEngine
+from .trace import ShiftReduceTrace, TraceAction, TraceStep
 from .types import GotoTable, ActionTable, Action
 
 
 class Automaton(ParsingEngine):
-    """
-    A shift-reduce automaton that processes a stream of tokens to construct an AST.
-
-    Methods:
-        process(symbols: List[Token]) -> AST:
-            Processes a list of tokens, applying shift-reduce parsing, and returns the resulting AST.
-    """
+    """A shift-reduce automaton that processes a stream of tokens to construct an AST."""
 
     def __init__(self, goto: GotoTable, action: ActionTable) -> None:
-        """
-        Initializes the Automaton with goto and action tables.
-
-        Args:
-            goto (dict): The goto table, mapping (state, symbol) to the next state.
-            action (dict): The action table, mapping (state, token) to an action.
-        """
         self._goto = goto
         self._action = action
 
     def parse(self, stream: list[Token]) -> AST:
-        """
-        Processes a stream of symbols (tokens) using shift-reduce parsing to construct an AST.
-        Args:
-            stream (list[Token]): A list of tokens to parse.
-        Returns:
-            AST: The resulting abstract syntax tree after parsing the input symbols.
-        Raises:
-            KeyError: If an unexpected token is encountered or an invalid action is specified.
-        """
+        """Parse a token stream and return the AST, or raise on error."""
+        result = self.trace(stream)
+        if result.error is not None:
+            raise ValueError(result.error)
+        assert result.ast is not None
+        return result.ast
 
+    def trace(self, stream: list[Token]) -> ShiftReduceTrace:
+        """Run shift-reduce parsing and record each step as a TraceStep."""
         buffer = stream + [Token("$", "$")]
         stack: list[int] = [0]
         tree_stack: list[AST] = []
         index = 0
+        steps: list[TraceStep] = []
 
         while index < len(buffer):
             state = stack[-1]
             curr_token = buffer[index]
-            action: Action = self._action[state, curr_token.token]
+
+            try:
+                action: Action = self._action[state, curr_token.token]
+            except KeyError:
+                return ShiftReduceTrace(
+                    tokens=tuple(stream),
+                    steps=tuple(steps),
+                    ast=None,
+                    error=f"Unexpected token '{curr_token.lexeme}' ({curr_token.token}) at position {index}",
+                )
+
+            steps.append(TraceStep(
+                step=len(steps),
+                stack=tuple(stack),
+                input_buffer=tuple(buffer[index:]),
+                action=_to_trace_action(action),
+            ))
 
             if action[0] == "shift":
-                # Perform a shift action - and keep track of the shifted token on the ast
                 tree_stack.append(AST(curr_token))
                 stack.append(action[1])
                 index += 1
             elif action[0] == "reduce":
-                # reduce by popping |rhs| symbols from the stack and merge an equivalent number of ast nodes
                 prod = action[1]
                 children: list[AST] = []
                 for _ in prod.rhs:
@@ -62,6 +64,25 @@ class Automaton(ParsingEngine):
                 tree_stack.append(AST(prod.lhs, list(reversed(copy.deepcopy(children)))))
                 stack.append(self._goto[(stack[-1], prod.lhs)])
             elif action[0] == "accept":
-                return tree_stack[0]
+                return ShiftReduceTrace(
+                    tokens=tuple(stream),
+                    steps=tuple(steps),
+                    ast=tree_stack[0] if tree_stack else None,
+                )
 
-        raise ValueError("Unexpected end of input")
+        return ShiftReduceTrace(
+            tokens=tuple(stream),
+            steps=tuple(steps),
+            ast=None,
+            error="Unexpected end of input",
+        )
+
+
+def _to_trace_action(action: Action) -> TraceAction:
+    """Convert an Action tuple to a TraceAction dataclass."""
+    if action[0] == "shift":
+        return TraceAction(type="shift", state=action[1])
+    elif action[0] == "reduce":
+        return TraceAction(type="reduce", production=action[1])
+    else:
+        return TraceAction(type="accept")

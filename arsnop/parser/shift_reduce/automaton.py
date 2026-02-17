@@ -1,5 +1,4 @@
-import copy
-
+from ...grammar import Production
 from ...lexer import Token
 from ..ast import AST
 from ..parsingEngine import ParsingEngine
@@ -48,7 +47,7 @@ class Automaton(ParsingEngine):
                 step=len(steps),
                 stack=tuple(stack),
                 input_buffer=tuple(buffer[index:]),
-                action=_to_trace_action(action),
+                action=TraceAction.from_action(action),
             ))
 
             if action[0] == "shift":
@@ -56,13 +55,7 @@ class Automaton(ParsingEngine):
                 stack.append(action[1])
                 index += 1
             elif action[0] == "reduce":
-                prod = action[1]
-                children: list[AST] = []
-                for _ in prod.rhs:
-                    stack.pop()
-                    children.append(tree_stack.pop())
-                tree_stack.append(AST(prod.lhs, list(reversed(copy.deepcopy(children)))))
-                stack.append(self._goto[(stack[-1], prod.lhs)])
+                self._reduce(action[1], stack, tree_stack)
             elif action[0] == "accept":
                 return ShiftReduceTrace(
                     tokens=tuple(stream),
@@ -77,12 +70,11 @@ class Automaton(ParsingEngine):
             error="Unexpected end of input",
         )
 
-
-def _to_trace_action(action: Action) -> TraceAction:
-    """Convert an Action tuple to a TraceAction dataclass."""
-    if action[0] == "shift":
-        return TraceAction(type="shift", state=action[1])
-    elif action[0] == "reduce":
-        return TraceAction(type="reduce", production=action[1])
-    else:
-        return TraceAction(type="accept")
+    def _reduce(self, prod: Production, stack: list[int], tree_stack: list[AST]) -> None:
+        """Pop RHS symbols off the stacks, push a new AST node, and goto."""
+        children: list[AST] = []
+        for _ in prod.rhs:
+            stack.pop()
+            children.append(tree_stack.pop())
+        tree_stack.append(AST(prod.lhs, reversed(children)))
+        stack.append(self._goto[(stack[-1], prod.lhs)])

@@ -66,7 +66,9 @@ function StateNode({ data }: NodeProps<Node<StateNodeData>>) {
         overflow: "hidden",
       }}
     >
-      <Handle type="target" position={Position.Left} style={{ background: "#555" }} />
+      <Handle id="left" type="target" position={Position.Left} style={{ background: "#555" }} />
+      <Handle id="top-source" type="source" position={Position.Top} style={{ background: "#555" }} />
+      <Handle id="top-target" type="target" position={Position.Top} style={{ background: "#555" }} />
       <Box sx={{ bgcolor: "#1565c0", color: "#fff", px: 1, py: 0.5 }}>
         <Typography variant="caption" sx={{ fontWeight: "bold" }}>
           State {state.index}
@@ -87,7 +89,7 @@ function StateNode({ data }: NodeProps<Node<StateNodeData>>) {
           </Typography>
         )}
       </Box>
-      <Handle type="source" position={Position.Right} style={{ background: "#555" }} />
+      <Handle id="right" type="source" position={Position.Right} style={{ background: "#555" }} />
     </Box>
   );
 }
@@ -136,8 +138,49 @@ function LabeledEdge({
   );
 }
 
+function SelfLoopEdge({
+  id,
+  sourceX,
+  sourceY,
+  label,
+  style,
+  markerEnd,
+}: EdgeProps) {
+  const spread = 20;
+  const liftHeight = 60;
+  const edgePath = `M ${sourceX - spread},${sourceY} C ${sourceX - spread},${sourceY - liftHeight} ${sourceX + spread},${sourceY - liftHeight} ${sourceX + spread},${sourceY}`;
+  const labelX = sourceX;
+  const labelY = sourceY - liftHeight;
+
+  return (
+    <>
+      <BaseEdge id={id} path={edgePath} style={style} markerEnd={markerEnd} />
+      {label && (
+        <EdgeLabelRenderer>
+          <Box
+            sx={{
+              position: "absolute",
+              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+              pointerEvents: "all",
+              bgcolor: "white",
+              px: 0.5,
+              borderRadius: 0.5,
+              fontSize: "0.7rem",
+              fontFamily: "monospace",
+              border: "1px solid #ccc",
+            }}
+            className="nodrag nopan"
+          >
+            {label}
+          </Box>
+        </EdgeLabelRenderer>
+      )}
+    </>
+  );
+}
+
 const nodeTypes = { stateNode: StateNode };
-const edgeTypes = { labeled: LabeledEdge };
+const edgeTypes = { labeled: LabeledEdge, selfLoop: SelfLoopEdge };
 
 export default function StateGraph() {
   const tablesResult = useAppStore((s) => s.tablesResult);
@@ -213,15 +256,21 @@ export default function StateGraph() {
       };
     });
 
-    const edges: Edge[] = Array.from(edgeMap.entries()).map(([key, e]) => ({
-      id: key,
-      source: e.source,
-      target: e.target,
-      type: "labeled",
-      label: e.label,
-      style: { stroke: e.type === "shift" ? "#1565c0" : "#7b1fa2", strokeWidth: 2 },
-      markerEnd: { type: MarkerType.ArrowClosed, color: e.type === "shift" ? "#1565c0" : "#7b1fa2" },
-    }));
+    const edges: Edge[] = Array.from(edgeMap.entries()).map(([key, e]) => {
+      const isSelfLoop = e.source === e.target;
+      return {
+        id: key,
+        source: e.source,
+        target: e.target,
+        type: isSelfLoop ? "selfLoop" : "labeled",
+        label: e.label,
+        style: { stroke: e.type === "shift" ? "#1565c0" : "#7b1fa2", strokeWidth: 2 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: e.type === "shift" ? "#1565c0" : "#7b1fa2" },
+        sourceHandle: isSelfLoop ? "top-source" : "right",
+        targetHandle: isSelfLoop ? "top-target" : "left",
+        ...(isSelfLoop && { zIndex: 1 }),
+      };
+    });
 
     return { layoutNodes: nodes, layoutEdges: edges };
   }, [tablesResult, handleSelect]);

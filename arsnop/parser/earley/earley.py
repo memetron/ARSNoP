@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 
 from ...grammar.bnf_types import InlineType
 from ...grammar.grammar import Grammar
 from ...grammar.production import Production
-from ...lexer import Token
+from ...lexer import Lexer, Token
 from ...ast import AST
 from ..tree import TreeItem, make_tree_item, splice_children
 from .state import Item, State
@@ -18,12 +18,6 @@ class Earley(ParsingEngine):
     Implements the Earley parsing algorithm.
     """
     def __init__(self, grammar: Grammar):
-        """
-        Initializes the Earley parser.
-        Args:
-            grammar (Grammar): The grammar for parsing.
-            start_symbol (str): The start symbol of the grammar.
-        """
         self._grammar = grammar
         start_productions = grammar.lookup_productions(grammar.start_symbol)
         start_items = {Item(production, 0, 0) for production in start_productions}
@@ -32,8 +26,6 @@ class Earley(ParsingEngine):
     def read(self, symbol: Token) -> None:
         """
         Processes a symbol from the input and advances the parser state.
-        Args:
-            symbol (Token): The input symbol to read.
         """
         seed = self._states[-1].successor(symbol.token, matched_by=symbol)
         new_index = len(self._states)
@@ -42,12 +34,6 @@ class Earley(ParsingEngine):
         self._states.append(State(self._grammar, set(column), new_index))
 
     def _get_recognized_item(self) -> Item | None:
-        """
-        Checks if the input string is recognized by the grammar.
-
-        Returns:
-            Item | None: The recognized item if found, otherwise None.
-        """
         for item in self._states[-1].items:
             if (item.is_completed()
                     and item.input_position == 0
@@ -55,30 +41,38 @@ class Earley(ParsingEngine):
                 return item
         return None
 
-    def parse(self, stream: list[Token]) -> AST:
-        """
-        Parses a list of tokens.
-        Args:
-            stream (list[Token]): The input tokens to parse.
-        Returns:
-            AST: The abstract syntax tree for the input.
-        """
-        for token in stream:
-            self.read(token)
+    def parse(self, text: str, lexer: Lexer) -> AST:
+        """Parse text with contextual lexing."""
+        lexer_terminals = frozenset(lexer.terminals.keys())
+        pos = 0
+        while True:
+            valid = _valid_scan_terminals(self._states[-1].items, lexer_terminals)
+            try:
+                tok, pos = lexer.lex_one(text, pos, valid)
+            except Exception as e:
+                raise ValueError(str(e)) from e
+            if tok is None:
+                break
+            self.read(tok)
         recognized_item = self._get_recognized_item()
         if recognized_item:
             return _to_ast(recognized_item)
+        valid = _valid_scan_terminals(self._states[-1].items, lexer_terminals)
+        if valid:
+            expected = ", ".join(sorted(valid))
+            raise ValueError(f"Unexpected end of input (expected: {expected})")
         raise ValueError("Input not recognized by the grammar.")
 
     @classmethod
     def trace(
         cls,
         grammar: Grammar,
-        tokens: list[Token],
+        text: str,
+        lexer: Lexer,
         start_symbol: str = "start",
     ) -> EarleyTrace:
-        """Run the Earley algorithm and return the full chart with operation labels."""
-        return _traced_earley_parse(grammar, tokens, start_symbol)
+        """Run the Earley algorithm with contextual lexing and return the full chart."""
+        return _traced_earley_parse(grammar, text, lexer, start_symbol)
 
 
 def _build_column(
@@ -90,11 +84,7 @@ def _build_column(
     predict_op: str | None = None,
     complete_op: str | None = None,
 ) -> list[Item]:
-    """Build one Earley column via a predict+complete fixpoint.
-
-    Items are deduplicated by (production, dot, input_position); the first
-    derivation found wins.
-    """
+    """Build one Earley column via a predict+complete fixpoint."""
     seen: set[tuple[Production, int, int]] = set()
     result: list[Item] = []
     nullable_completions: dict[str, Item] = {}
@@ -207,12 +197,7 @@ def _to_ast(item: Item) -> AST:
 
 
 def _to_tree_item(item: Item) -> TreeItem:
-    """Recursively build an AST node or an inline list for modifier rules.
-
-    Non-modifier items return an ``AST`` node as usual.  Modifier items return
-    a bare ``list[AST]`` so their children are spliced directly into the
-    parent's child list, leaving no wrapper node in the final tree.
-    """
+    """Recursively build an AST node or an inline list for modifier rules."""
     raw_items: list[Item] = []
     curr: Item = item
     while curr.prev_step:
@@ -231,26 +216,49 @@ def _to_tree_item(item: Item) -> TreeItem:
     return make_tree_item(label, prod.inline if prod.label is None else InlineType.NONE, ordered)
 
 
+def _valid_scan_terminals(items: Iterable[Item], lexer_terminals: frozenset[str]) -> frozenset[str]:
+    """Collect terminal names expected next across all non-completed items."""
+    result: set[str] = set()
+    for item in items:
+        if not item.is_completed():
+            sym = item.get_next_symbol()
+            if sym in lexer_terminals:
+                result.add(sym)
+    return frozenset(result)
+
+
 def _traced_earley_parse(
     grammar: Grammar,
-    tokens: list[Token],
+    text: str,
+    lexer: Lexer,
     start_symbol: str = "start",
 ) -> EarleyTrace:
-    """Run the Earley algorithm and return an EarleyTrace with operation labels."""
+    """Run the Earley algorithm with contextual lexing and return an EarleyTrace."""
     start_productions = grammar.lookup_productions(start_symbol)
     init_items = [Item(p, 0, 0, "init") for p in start_productions]
     chart: list[list[Item]] = [
         _build_column(grammar, init_items, [], 0, predict_op="predict", complete_op="complete")
     ]
+    tokens: list[Token] = []
+    pos = 0
+    lexer_terminals = frozenset(lexer.terminals.keys())
 
-    for i, tok in enumerate(tokens):
-        col_index = i + 1
-        scanned = _scan(chart[i], tok)
+    while True:
+        valid = _valid_scan_terminals(chart[-1], lexer_terminals)
+        try:
+            tok, pos = lexer.lex_one(text, pos, valid)
+        except Exception as e:
+            return _build_earley_trace(tokens, chart, error=str(e))
+        if tok is None:
+            break
+        tokens.append(tok)
+        col_index = len(chart)
+        scanned = _scan(chart[-1], tok)
         if not scanned:
             return _build_earley_trace(
                 tokens,
                 chart,
-                error=f"Unexpected token '{tok.lexeme}' ({tok.token}) at position {i}",
+                error=f"Unexpected token '{tok.lexeme}' ({tok.token})",
             )
         col = _build_column(
             grammar, scanned, chart, col_index,
@@ -260,9 +268,7 @@ def _traced_earley_parse(
 
     ast = _find_and_build_ast(chart, start_symbol)
     if ast is None:
-        return _build_earley_trace(
-            tokens, chart, error="Input not recognized by the grammar.",
-        )
+        return _build_earley_trace(tokens, chart, error="Input not recognized by the grammar.")
     return _build_earley_trace(tokens, chart, ast=ast)
 
 

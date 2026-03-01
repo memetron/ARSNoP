@@ -100,6 +100,5 @@ class Parser:
         Returns:
             Any: The transformed AST if a transformer is provided, or the raw AST otherwise.
         """
-        tokens = self._lexer.lex(text)
-        ast = self._parser.parse(tokens)
+        ast = self._parser.parse(text, self._lexer)
         return self._transformer.transform(ast) if self._transformer else ast

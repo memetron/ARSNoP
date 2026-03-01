@@ -34,6 +34,6 @@ class TestGeneratorConsistency:
         grammar = Grammar(spec.rules)
         lexer = Lexer(spec.terminals, spec.ignored)
 
-        earley_ast = Earley(grammar).parse(lexer.lex(input_text))
+        earley_ast = Earley(grammar).parse(input_text, lexer)
         slr_ast = parse_with(SLR, NESTED_BNF, input_text)
         assert collect_leaves(earley_ast) == collect_leaves(slr_ast)

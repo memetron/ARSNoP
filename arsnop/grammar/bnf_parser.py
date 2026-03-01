@@ -92,7 +92,10 @@ _GRAMMAR = Grammar([
 
 def parse_bnf_ast(text: str) -> AST:
     """Parse a complete BNF file text and return the raw ``AST``."""
-    return Earley(_GRAMMAR).parse(_LEXER.lex(text))
+    try:
+        return Earley(_GRAMMAR).parse(text, _LEXER)
+    except ValueError as e:
+        raise ValueError(f"Grammar specification error: {e}") from e
 
 def parse_bnf(text: str) -> BnfSpec:
     """Parse a complete BNF file text and return a ``BnfSpec``."""

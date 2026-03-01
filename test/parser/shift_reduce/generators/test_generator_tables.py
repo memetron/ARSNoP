@@ -51,17 +51,15 @@ class TestGenerateTablesConsistency:
         spec = parse_bnf(SIMPLE_BNF)
         grammar = Grammar(spec.rules)
         lexer = Lexer(spec.terminals, spec.ignored)
-        tokens = lexer.lex("a")
-
         # Parse via generate()
         automaton1 = generator_cls().generate(grammar)
-        ast1 = automaton1.parse(tokens)
+        ast1 = automaton1.parse("a", lexer)
 
         # Parse via generate_tables()
         from arsnop.parser.shift_reduce.automaton import Automaton
         result = generator_cls().generate_tables(grammar)
         automaton2 = Automaton(result.goto_table, result.action_table)
-        ast2 = automaton2.parse(tokens)
+        ast2 = automaton2.parse("a", lexer)
 
         assert str(ast1) == str(ast2)
 

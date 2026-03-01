@@ -47,9 +47,7 @@ def _parse(bnf_text, input_text):
     spec = parse_bnf(bnf_text)
     grammar = Grammar(spec.rules)
     lexer = Lexer(spec.terminals, spec.ignored)
-    engine = Earley(grammar)
-    tokens = lexer.lex(input_text)
-    return engine.parse(tokens)
+    return Earley(grammar).parse(input_text, lexer)
 
 
 def _collect_leaves(ast):
@@ -83,10 +81,8 @@ class TestEarleyParser:
         spec = parse_bnf(SIMPLE_BNF)
         grammar = Grammar(spec.rules)
         lexer = Lexer(spec.terminals, spec.ignored)
-        engine = Earley(grammar)
-        tokens = lexer.lex("a a")
         with pytest.raises(ValueError):
-            engine.parse(tokens)
+            Earley(grammar).parse("a a", lexer)
 
 
 _EBNF_BNF = (
@@ -100,7 +96,8 @@ _EBNF_BNF = (
 
 def _parse_ebnf(input_text: str):
     spec = parse_bnf(_EBNF_BNF)
-    return Earley(Grammar(spec.rules)).parse(Lexer(spec.terminals, spec.ignored).lex(input_text))
+    lexer = Lexer(spec.terminals, spec.ignored)
+    return Earley(Grammar(spec.rules)).parse(input_text, lexer)
 
 
 class TestEarleyModifierInlining:

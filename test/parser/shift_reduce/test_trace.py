@@ -2,7 +2,7 @@
 
 from arsnop.grammar import Grammar
 from arsnop.grammar.bnf_parser import parse_bnf
-from arsnop.lexer import Lexer, Token
+from arsnop.lexer import Lexer
 from arsnop.parser.shift_reduce import LR1, ShiftReduceTrace, TraceStep, TraceAction
 
 
@@ -19,42 +19,35 @@ BNF_TEXT = (
 )
 
 _SPEC = parse_bnf(BNF_TEXT)
+_LEXER = Lexer(_SPEC.terminals, _SPEC.ignored)
 
 
-def _build_automaton(bnf_text=BNF_TEXT):
+def _build_automaton(bnf_text: str = BNF_TEXT):
     grammar = Grammar(parse_bnf(bnf_text).rules)
     return LR1().generate(grammar)
-
-
-def _lex(input_text):
-    return Lexer(_SPEC.terminals, _SPEC.ignored).lex(input_text)
 
 
 class TestTraceReturnType:
     def test_returns_shift_reduce_trace(self):
         automaton = _build_automaton()
-        tokens = _lex("1 + 2")
-        result = automaton.trace(tokens)
+        result = automaton.trace("1 + 2", _LEXER)
         assert isinstance(result, ShiftReduceTrace)
 
     def test_steps_are_trace_steps(self):
         automaton = _build_automaton()
-        tokens = _lex("1")
-        result = automaton.trace(tokens)
+        result = automaton.trace("1", _LEXER)
         assert all(isinstance(s, TraceStep) for s in result.steps)
 
     def test_actions_are_trace_actions(self):
         automaton = _build_automaton()
-        tokens = _lex("1")
-        result = automaton.trace(tokens)
+        result = automaton.trace("1", _LEXER)
         assert all(isinstance(s.action, TraceAction) for s in result.steps)
 
 
 class TestTraceSteps:
     def test_has_shift_reduce_accept(self):
         automaton = _build_automaton()
-        tokens = _lex("1 + 2")
-        result = automaton.trace(tokens)
+        result = automaton.trace("1 + 2", _LEXER)
         action_types = {s.action.type for s in result.steps}
         assert "shift" in action_types
         assert "reduce" in action_types
@@ -62,33 +55,28 @@ class TestTraceSteps:
 
     def test_last_step_is_accept(self):
         automaton = _build_automaton()
-        tokens = _lex("1")
-        result = automaton.trace(tokens)
+        result = automaton.trace("1", _LEXER)
         assert result.steps[-1].action.type == "accept"
 
     def test_step_numbers_sequential(self):
         automaton = _build_automaton()
-        tokens = _lex("1 + 2")
-        result = automaton.trace(tokens)
+        result = automaton.trace("1 + 2", _LEXER)
         for i, step in enumerate(result.steps):
             assert step.step == i
 
     def test_stack_is_tuple(self):
         automaton = _build_automaton()
-        tokens = _lex("1")
-        result = automaton.trace(tokens)
+        result = automaton.trace("1", _LEXER)
         assert all(isinstance(s.stack, tuple) for s in result.steps)
 
     def test_input_buffer_is_tuple(self):
         automaton = _build_automaton()
-        tokens = _lex("1")
-        result = automaton.trace(tokens)
+        result = automaton.trace("1", _LEXER)
         assert all(isinstance(s.input_buffer, tuple) for s in result.steps)
 
     def test_shift_action_has_state(self):
         automaton = _build_automaton()
-        tokens = _lex("1")
-        result = automaton.trace(tokens)
+        result = automaton.trace("1", _LEXER)
         shift_steps = [s for s in result.steps if s.action.type == "shift"]
         assert len(shift_steps) > 0
         for s in shift_steps:
@@ -96,8 +84,7 @@ class TestTraceSteps:
 
     def test_reduce_action_has_production(self):
         automaton = _build_automaton()
-        tokens = _lex("1")
-        result = automaton.trace(tokens)
+        result = automaton.trace("1", _LEXER)
         reduce_steps = [s for s in result.steps if s.action.type == "reduce"]
         assert len(reduce_steps) > 0
         for s in reduce_steps:
@@ -107,23 +94,21 @@ class TestTraceSteps:
 class TestTraceASTConsistency:
     def test_ast_matches_parse(self):
         automaton = _build_automaton()
-        tokens = _lex("1 + 2")
-        trace_result = automaton.trace(tokens)
-        parse_result = automaton.parse(tokens)
+        trace_result = automaton.trace("1 + 2", _LEXER)
+        parse_result = automaton.parse("1 + 2", _LEXER)
         assert trace_result.ast is not None
         assert str(trace_result.ast) == str(parse_result)
 
     def test_no_error_on_success(self):
         automaton = _build_automaton()
-        tokens = _lex("1")
-        result = automaton.trace(tokens)
+        result = automaton.trace("1", _LEXER)
         assert result.error is None
 
     def test_tokens_preserved(self):
         automaton = _build_automaton()
-        tokens = _lex("1 + 2")
-        result = automaton.trace(tokens)
-        assert len(result.tokens) == len(tokens)
+        result = automaton.trace("1 + 2", _LEXER)
+        # "1 + 2" → 3 tokens (NUM, PLUS, NUM)
+        assert len(result.tokens) == 3
 
 
 _EBNF_BNF_TEXT = (
@@ -135,21 +120,18 @@ _EBNF_BNF_TEXT = (
 )
 
 _EBNF_SPEC = parse_bnf(_EBNF_BNF_TEXT)
+_EBNF_LEXER = Lexer(_EBNF_SPEC.terminals, _EBNF_SPEC.ignored)
 
 
 def _build_ebnf_automaton():
     return LR1().generate(Grammar(_EBNF_SPEC.rules))
 
 
-def _lex_ebnf(text: str):
-    return Lexer(_EBNF_SPEC.terminals, _EBNF_SPEC.ignored).lex(text)
-
-
 class TestModifierInlining:
     """EBNF-generated aux rule nodes should be absent from the AST entirely."""
 
     def _ast(self, input_text: str):
-        return _build_ebnf_automaton().parse(_lex_ebnf(input_text))
+        return _build_ebnf_automaton().parse(input_text, _EBNF_LEXER)
 
     def test_star_empty_start_has_no_children(self):
         ast = self._ast("")
@@ -179,16 +161,16 @@ class TestModifierInlining:
 class TestTraceError:
     def test_error_on_unexpected_token(self):
         automaton = _build_automaton()
-        tokens = [Token("PLUS", "+")]
-        result = automaton.trace(tokens)
+        # "+" cannot be lexed in the initial state (only NUM is expected)
+        result = automaton.trace("+", _LEXER)
         assert result.ast is None
         assert result.error is not None
-        assert "Unexpected token" in result.error
 
     def test_error_has_partial_trace(self):
         automaton = _build_automaton()
-        tokens = [Token("NUM", "1"), Token("NUM", "2")]
-        result = automaton.trace(tokens)
+        # "1 2": after shifting NUM, only PLUS is a valid next terminal
+        # so "2" cannot be lexed → lex error, but at least 1 step recorded
+        result = automaton.trace("1 2", _LEXER)
         assert result.ast is None
         assert result.error is not None
         assert len(result.steps) > 0

@@ -1,7 +1,7 @@
 import copy
 
 from ...grammar.bnf_types import InlineType
-from ...lexer import Token
+from ...lexer import Lexer, Token
 from ...ast import AST
 from ..parsingEngine import ParsingEngine
 from ..tree import TreeItem, make_tree_item, splice_children
@@ -15,48 +15,71 @@ class Automaton(ParsingEngine):
     def __init__(self, goto: GotoTable, action: ActionTable) -> None:
         self._goto = goto
         self._action = action
+        self._valid_by_state: dict[int, frozenset[str]] = {}
+        for state, terminal in action.keys():
+            self._valid_by_state[state] = self._valid_by_state.get(state, frozenset()) | {terminal}
 
-    def parse(self, stream: list[Token]) -> AST:
-        """Parse a token stream and return the AST, or raise on error."""
-        result = self.trace(stream)
+    def parse(self, text: str, lexer: Lexer) -> AST:
+        """Parse with contextual lexing, consulting the action table at each step."""
+        result = self.trace(text, lexer)
         if result.error is not None:
             raise ValueError(result.error)
         assert result.ast is not None
         return result.ast
 
-    def trace(self, stream: list[Token]) -> ShiftReduceTrace:
-        """Run shift-reduce parsing and record each step as a TraceStep."""
-        buffer = stream + [Token("$", "$")]
+    def trace(self, text: str, lexer: Lexer) -> ShiftReduceTrace:
+        """Shift-reduce parse loop that fetches tokens on demand via lex_one."""
         stack: list[int] = [0]
         tree_stack: list[TreeItem] = []
-        index = 0
         steps: list[TraceStep] = []
+        tokens: list[Token] = []
+        pos = 0
+        lex_error: list[str] = []
 
-        while index < len(buffer):
+        def advance() -> Token | None:
+            """Fetch the next token from the input."""
+            nonlocal pos
+            valid = self._valid_by_state.get(stack[-1], frozenset()) - {"$"}
+            try:
+                tok, pos = lexer.lex_one(text, pos, valid)
+                return tok
+            except Exception as e:
+                lex_error.append(str(e))
+                return None
+
+        _next = advance()
+        if lex_error:
+            return ShiftReduceTrace(tokens=(), steps=(), ast=None, error=lex_error[0])
+        lookahead = _next if _next is not None else Token("$", "$")
+
+        while True:
             state = stack[-1]
-            curr_token = buffer[index]
 
             try:
-                action: Action = self._action[state, curr_token.token]
+                action: Action = self._action[state, lookahead.token]
             except KeyError:
                 return ShiftReduceTrace(
-                    tokens=tuple(stream),
+                    tokens=tuple(tokens),
                     steps=tuple(steps),
                     ast=None,
-                    error=f"Unexpected token '{curr_token.lexeme}' ({curr_token.token}) at position {index}",
+                    error=f"Unexpected token '{lookahead.lexeme}' ({lookahead.token})",
                 )
 
             steps.append(TraceStep(
                 step=len(steps),
                 stack=tuple(stack),
-                input_buffer=tuple(buffer[index:]),
+                input_buffer=(lookahead,),
                 action=_to_trace_action(action),
             ))
 
             if action[0] == "shift":
-                tree_stack.append([] if curr_token.inline else AST(curr_token))
+                tokens.append(lookahead)
+                tree_stack.append([] if lookahead.inline else AST(lookahead))
                 stack.append(action[1])
-                index += 1
+                _next = advance()
+                if lex_error:
+                    return ShiftReduceTrace(tokens=tuple(tokens), steps=tuple(steps), ast=None, error=lex_error[0])
+                lookahead = _next if _next is not None else Token("$", "$")
             elif action[0] == "reduce":
                 prod = action[1]
                 raw: list[TreeItem] = []
@@ -71,17 +94,10 @@ class Automaton(ParsingEngine):
                 top = tree_stack[0] if tree_stack else None
                 ast = top if isinstance(top, AST) else None
                 return ShiftReduceTrace(
-                    tokens=tuple(stream),
+                    tokens=tuple(tokens),
                     steps=tuple(steps),
                     ast=ast,
                 )
-
-        return ShiftReduceTrace(
-            tokens=tuple(stream),
-            steps=tuple(steps),
-            ast=None,
-            error="Unexpected end of input",
-        )
 
 
 def _to_trace_action(action: Action) -> TraceAction:

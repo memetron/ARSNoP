@@ -88,14 +88,9 @@ def execute_parse():
     except Exception as e:
         return jsonify({"error": "grammar_error", "message": str(e)}), 400
 
-    try:
-        tokens = lexer.lex(input_text)
-    except Exception as e:
-        return jsonify({"error": "lex_error", "message": str(e)}), 400
-
     if variant == "earley":
         try:
-            trace = Earley.trace(grammar, tokens)
+            trace = Earley.trace(grammar, input_text, lexer)
         except Exception as e:
             return jsonify({"error": "parse_error", "message": str(e)}), 400
         return jsonify(serialize_earley_trace(trace))
@@ -106,5 +101,8 @@ def execute_parse():
         return jsonify({"error": "table_error", "message": str(e)}), 400
 
     automaton = Automaton(result.goto_table, result.action_table)
-    trace = automaton.trace(tokens)
+    try:
+        trace = automaton.trace(input_text, lexer)
+    except Exception as e:
+        return jsonify({"error": "parse_error", "message": str(e)}), 400
     return jsonify(serialize_shift_reduce_trace(trace))

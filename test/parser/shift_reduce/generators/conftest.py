@@ -42,8 +42,7 @@ def parse_with(generator_cls, bnf_text, input_text):
     grammar = Grammar(spec.rules)
     lexer = Lexer(spec.terminals, spec.ignored)
     automaton = generator_cls().generate(grammar)
-    tokens = lexer.lex(input_text)
-    return automaton.parse(tokens)
+    return automaton.parse(input_text, lexer)
 
 
 def collect_leaves(ast):

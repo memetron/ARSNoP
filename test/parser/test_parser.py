@@ -89,14 +89,14 @@ class TestLabeledInline:
 
     def test_earley_labeled_alt_creates_named_node(self):
         grammar, lexer = self._spec()
-        ast = Earley(grammar).parse(lexer.lex("a"))
+        ast = Earley(grammar).parse("a", lexer)
         # start should have one child: a named "found" node
         assert len(ast.children) == 1
         assert ast.children[0].content == "found"
 
     def test_earley_unlabeled_alt_still_spliced(self):
         grammar, lexer = self._spec()
-        ast = Earley(grammar).parse(lexer.lex("b"))
+        ast = Earley(grammar).parse("b", lexer)
         # start should have one child: the B token directly (spliced)
         assert len(ast.children) == 1
         assert isinstance(ast.children[0].content, Token)
@@ -104,13 +104,13 @@ class TestLabeledInline:
 
     def test_slr_labeled_alt_creates_named_node(self):
         grammar, lexer = self._spec()
-        ast = SLR().generate(grammar).parse(lexer.lex("a"))
+        ast = SLR().generate(grammar).parse("a", lexer)
         assert len(ast.children) == 1
         assert ast.children[0].content == "found"
 
     def test_slr_unlabeled_alt_still_spliced(self):
         grammar, lexer = self._spec()
-        ast = SLR().generate(grammar).parse(lexer.lex("b"))
+        ast = SLR().generate(grammar).parse("b", lexer)
         assert len(ast.children) == 1
         assert isinstance(ast.children[0].content, Token)
         assert ast.children[0].content.token == "B"
@@ -149,8 +149,7 @@ class TestInlineTokenTree:
         spec = parse_bnf(_INLINE_BNF)
         grammar = Grammar(spec.rules)
         lexer = Lexer(spec.terminals, spec.ignored)
-        tokens = lexer.lex("foo, 42")
-        return parser_engine(grammar).parse(tokens)
+        return parser_engine(grammar).parse("foo, 42", lexer)
 
     def test_earley_inline_token_absent(self):
         ast = self._parse(Earley)
@@ -172,8 +171,7 @@ class TestInlineTokenTree:
         spec = parse_bnf(_INLINE_BNF)
         grammar = Grammar(spec.rules)
         lexer = Lexer(spec.terminals, spec.ignored)
-        tokens = lexer.lex("foo, 42")
-        ast = SLR().generate(grammar).parse(tokens)
+        ast = SLR().generate(grammar).parse("foo, 42", lexer)
         leaves = _leaf_tokens(ast)
         assert not any(t.token.startswith("_INLINE_") for t in leaves)
 
@@ -181,6 +179,5 @@ class TestInlineTokenTree:
         spec = parse_bnf(_INLINE_BNF)
         grammar = Grammar(spec.rules)
         lexer = Lexer(spec.terminals, spec.ignored)
-        tokens = lexer.lex("foo, 42")
-        ast = SLR().generate(grammar).parse(tokens)
+        ast = SLR().generate(grammar).parse("foo, 42", lexer)
         assert len(_leaf_tokens(ast)) == 2

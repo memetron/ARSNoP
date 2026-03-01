@@ -3,8 +3,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .production import Modifier
-
 @dataclass(frozen=True)
 class Rhs:
     """One alternative in a rule (empty symbols tuple → nullable production)."""
@@ -18,7 +16,7 @@ class RuleSpec:
 
     lhs: str
     alternatives: tuple[Rhs, ...]
-    modifier: Modifier | None = None
+    inline: bool = False
 
 
 @dataclass(frozen=True)

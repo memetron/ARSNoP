@@ -10,7 +10,7 @@ import re
 from typing import Any
 
 from ..transformer import Transformer
-from .bnf_types import Modifier, Rhs, BnfSpec, RuleSpec, TerminalSpec
+from .bnf_types import Rhs, BnfSpec, RuleSpec, TerminalSpec
 
 _MODIFIER_SUFFIX: dict[str, str] = {"?": "opt", "*": "star", "+": "plus"}
 
@@ -89,11 +89,11 @@ class BnfSpecTransformer(Transformer):
         aux_name = f"_{id_str}_{_MODIFIER_SUFFIX[modifier]}"
         if aux_name not in self._aux_rules:
             if modifier == "?":
-                rule = RuleSpec(aux_name, (Rhs((id_str,)), Rhs(())), Modifier.OPT)
+                rule = RuleSpec(aux_name, (Rhs((id_str,)), Rhs(())), inline=True)
             elif modifier == "*":
-                rule = RuleSpec(aux_name, (Rhs((aux_name, id_str)), Rhs(())), Modifier.STAR)
+                rule = RuleSpec(aux_name, (Rhs((aux_name, id_str)), Rhs(())), inline=True)
             else:  # "+"
-                rule = RuleSpec(aux_name, (Rhs((aux_name, id_str)), Rhs((id_str,))), Modifier.PLUS)
+                rule = RuleSpec(aux_name, (Rhs((aux_name, id_str)), Rhs((id_str,))), inline=True)
             self._aux_rules[aux_name] = rule
         return aux_name
 

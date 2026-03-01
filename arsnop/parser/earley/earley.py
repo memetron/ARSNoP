@@ -224,7 +224,7 @@ def _to_tree_item(item: Item) -> TreeItem:
         elif curr_item.matched_token is not None:
             tree_items.append(AST(curr_item.matched_token))
     ordered = splice_children(reversed(tree_items))
-    return make_tree_item(item.production.lhs, item.production.modifier, ordered)
+    return make_tree_item(item.production.lhs, item.production.inline, ordered)
 
 
 def _traced_earley_parse(

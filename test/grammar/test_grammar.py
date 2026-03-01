@@ -1,24 +1,26 @@
 """Tests for src/grammar/grammar.py."""
-from arsnop.grammar import Grammar
+from arsnop.grammar import Grammar, parse_bnf
 
 
-SIMPLE_GRAMMAR = "start ::= expr\nexpr ::= TOK"
+SIMPLE_GRAMMAR = ":GRAMMAR\nstart ::= expr ;\nexpr ::= TOK ;\n:TERMINALS\n"
 
-ARITH_GRAMMAR = "start ::= expr\nexpr ::= expr OP NUM | NUM"
+ARITH_GRAMMAR = ":GRAMMAR\nstart ::= expr ;\nexpr ::= expr OP NUM | NUM ;\n:TERMINALS\n"
 
 # Grammar with nullable rules: A and B can derive epsilon
-NULLABLE_GRAMMAR = "start ::= A B c\nA ::= a | \nB ::= b | "
+NULLABLE_GRAMMAR = ":GRAMMAR\nstart ::= A B c ;\nA ::= a | ;\nB ::= b | ;\n:TERMINALS\n"
 
 MULTI_PRODUCTION = (
-    "start ::= list\n"
-    "list ::= LP items RP\n"
-    "items ::= ITEM SEP items | ITEM"
+    ":GRAMMAR\n"
+    "start ::= list ;\n"
+    "list ::= LP items RP ;\n"
+    "items ::= ITEM SEP items | ITEM ;\n"
+    ":TERMINALS\n"
 )
 
 
 class TestGrammarParsing:
     def test_terminals_and_nonterminals(self):
-        g = Grammar(SIMPLE_GRAMMAR)
+        g = Grammar(parse_bnf(SIMPLE_GRAMMAR).rules)
         assert "TOK" in g.terminals
         assert "start" in g.non_terminals
         assert "expr" in g.non_terminals
@@ -27,24 +29,24 @@ class TestGrammarParsing:
         assert "expr" not in g.terminals
 
     def test_productions_count(self):
-        g = Grammar(SIMPLE_GRAMMAR)
+        g = Grammar(parse_bnf(SIMPLE_GRAMMAR).rules)
         assert len(g.productions) == 2
 
     def test_start_symbol_default(self):
-        g = Grammar(SIMPLE_GRAMMAR)
+        g = Grammar(parse_bnf(SIMPLE_GRAMMAR).rules)
         assert g.start_symbol == "start"
 
     def test_start_symbol_custom(self):
-        g = Grammar("root ::= TOK", start_symbol="root")
+        g = Grammar(parse_bnf(":GRAMMAR\nroot ::= TOK ;\n:TERMINALS\n").rules, start_symbol="root")
         assert g.start_symbol == "root"
 
     def test_multiple_alternatives(self):
-        g = Grammar(ARITH_GRAMMAR)
+        g = Grammar(parse_bnf(ARITH_GRAMMAR).rules)
         expr_prods = [p for p in g.productions if p.lhs == "expr"]
         assert len(expr_prods) == 2
 
     def test_multi_rule_grammar(self):
-        g = Grammar(MULTI_PRODUCTION)
+        g = Grammar(parse_bnf(MULTI_PRODUCTION).rules)
         assert "list" in g.non_terminals
         assert "items" in g.non_terminals
         assert "LP" in g.terminals
@@ -55,47 +57,47 @@ class TestGrammarParsing:
 
 class TestLookupProductions:
     def test_lookup_existing(self):
-        g = Grammar(SIMPLE_GRAMMAR)
+        g = Grammar(parse_bnf(SIMPLE_GRAMMAR).rules)
         prods = g.lookup_productions("start")
         assert len(prods) == 1
         assert prods[0].lhs == "start"
         assert prods[0].rhs == ("expr",)
 
     def test_lookup_multiple(self):
-        g = Grammar(ARITH_GRAMMAR)
+        g = Grammar(parse_bnf(ARITH_GRAMMAR).rules)
         prods = g.lookup_productions("expr")
         assert len(prods) == 2
 
     def test_lookup_nonexistent(self):
-        g = Grammar(SIMPLE_GRAMMAR)
+        g = Grammar(parse_bnf(SIMPLE_GRAMMAR).rules)
         prods = g.lookup_productions("nonexistent")
         assert prods == []
 
 
 class TestIsNullable:
     def test_nullable_false_for_non_nullable(self):
-        g = Grammar(SIMPLE_GRAMMAR)
+        g = Grammar(parse_bnf(SIMPLE_GRAMMAR).rules)
         assert g.is_nullable("start") is False
         assert g.is_nullable("expr") is False
 
 
 class TestFirstSets:
     def test_first_of_terminal(self):
-        g = Grammar(SIMPLE_GRAMMAR)
+        g = Grammar(parse_bnf(SIMPLE_GRAMMAR).rules)
         assert g.first("TOK") == {"TOK"}
 
     def test_first_of_nonterminal(self):
-        g = Grammar(SIMPLE_GRAMMAR)
+        g = Grammar(parse_bnf(SIMPLE_GRAMMAR).rules)
         first_start = g.first("start")
         assert "TOK" in first_start
 
     def test_first_with_alternatives(self):
-        g = Grammar(ARITH_GRAMMAR)
+        g = Grammar(parse_bnf(ARITH_GRAMMAR).rules)
         first_expr = g.first("expr")
         assert "NUM" in first_expr
 
     def test_first_with_nullable(self):
-        g = Grammar(NULLABLE_GRAMMAR)
+        g = Grammar(parse_bnf(NULLABLE_GRAMMAR).rules)
         first_start = g.first("start")
         # start ::= A B c; A is nullable so first(start) should include first(B)
         # B is also nullable so first(start) should include first(c) = {c}
@@ -104,7 +106,7 @@ class TestFirstSets:
         assert "c" in first_start
 
     def test_first_nullable_nonterminal_contains_epsilon(self):
-        g = Grammar(NULLABLE_GRAMMAR)
+        g = Grammar(parse_bnf(NULLABLE_GRAMMAR).rules)
         first_a = g.first("A")
         assert "a" in first_a
         assert "" in first_a  # A can derive epsilon
@@ -112,17 +114,17 @@ class TestFirstSets:
 
 class TestFollowSets:
     def test_follow_start_contains_dollar(self):
-        g = Grammar(SIMPLE_GRAMMAR)
+        g = Grammar(parse_bnf(SIMPLE_GRAMMAR).rules)
         assert "$" in g.follow("start")
 
     def test_follow_nonterminal(self):
-        g = Grammar(SIMPLE_GRAMMAR)
+        g = Grammar(parse_bnf(SIMPLE_GRAMMAR).rules)
         follow_expr = g.follow("expr")
         # expr is the only production of start, so follow(expr) should include $
         assert "$" in follow_expr
 
     def test_follow_with_successor(self):
-        g = Grammar(NULLABLE_GRAMMAR)
+        g = Grammar(parse_bnf(NULLABLE_GRAMMAR).rules)
         follow_a = g.follow("A")
         # start ::= A B c; after A comes B, so first(B) - {eps} should be in follow(A)
         assert "b" in follow_a
@@ -130,7 +132,7 @@ class TestFollowSets:
         assert "c" in follow_a
 
     def test_follow_with_nullable_successor(self):
-        g = Grammar(NULLABLE_GRAMMAR)
+        g = Grammar(parse_bnf(NULLABLE_GRAMMAR).rules)
         follow_b = g.follow("B")
         # start ::= A B c; after B comes c, so first(c) = {c} should be in follow(B)
         assert "c" in follow_b

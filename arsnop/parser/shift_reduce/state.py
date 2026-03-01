@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from ...grammar import Production
+from ...grammar.production import Production
 
 
 @dataclass(frozen=True)

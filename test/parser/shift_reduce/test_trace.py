@@ -1,21 +1,33 @@
 """Tests for Automaton.trace()."""
 
 from arsnop.grammar import Grammar
+from arsnop.grammar.bnf_parser import parse_bnf
 from arsnop.lexer import Lexer, Token
 from arsnop.parser.shift_reduce import LR1, ShiftReduceTrace, TraceStep, TraceAction
 
 
-GRAMMAR_TEXT = "start ::= expr\nexpr ::= expr PLUS term | term\nterm ::= NUM"
-TERMINALS_TEXT = "PLUS \\+\nNUM [0-9]+\nSPC [ ]\n.IGNORE\nSPC"
+BNF_TEXT = (
+    ":GRAMMAR\n"
+    "start ::= expr ;\n"
+    "expr ::= expr PLUS term | term ;\n"
+    "term ::= NUM ;\n"
+    ":TERMINALS\n"
+    "PLUS /\\+/ ;\n"
+    "NUM /[0-9]+/ ;\n"
+    "SPC /[ ]/ ;\n"
+    ".IGNORE SPC ;\n"
+)
+
+_SPEC = parse_bnf(BNF_TEXT)
 
 
-def _build_automaton(grammar_text=GRAMMAR_TEXT):
-    grammar = Grammar(grammar_text)
+def _build_automaton(bnf_text=BNF_TEXT):
+    grammar = Grammar(parse_bnf(bnf_text).rules)
     return LR1().generate(grammar)
 
 
-def _lex(input_text, terminals_text=TERMINALS_TEXT):
-    return Lexer(terminals_text).lex(input_text)
+def _lex(input_text):
+    return Lexer(_SPEC.terminals, _SPEC.ignored).lex(input_text)
 
 
 class TestTraceReturnType:

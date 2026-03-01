@@ -1,12 +1,12 @@
 """Cross-generator consistency tests."""
 from arsnop.grammar import Grammar
+from arsnop.grammar.bnf_parser import parse_bnf
 from arsnop.lexer import Lexer
 from arsnop.parser.earley import Earley
 from arsnop.parser.shift_reduce import SLR, LR1, LALR, LALR_Brute_Force
 
 from .conftest import (
-    NESTED_GRAMMAR_TEXT,
-    NESTED_TERMINALS_TEXT,
+    NESTED_BNF,
     parse_with,
     collect_leaves,
 )
@@ -19,7 +19,7 @@ class TestGeneratorConsistency:
         input_text = "(foo,bar,baz)"
         results = {}
         for gen_cls in ALL_GENERATORS:
-            ast = parse_with(gen_cls, NESTED_GRAMMAR_TEXT, NESTED_TERMINALS_TEXT, input_text)
+            ast = parse_with(gen_cls, NESTED_BNF, input_text)
             results[gen_cls.__name__] = collect_leaves(ast)
 
         values = list(results.values())
@@ -30,9 +30,10 @@ class TestGeneratorConsistency:
 
     def test_earley_agrees_with_shift_reduce(self):
         input_text = "(foo,bar)"
-        grammar = Grammar(NESTED_GRAMMAR_TEXT)
-        lexer = Lexer(NESTED_TERMINALS_TEXT)
+        spec = parse_bnf(NESTED_BNF)
+        grammar = Grammar(spec.rules)
+        lexer = Lexer(spec.terminals, spec.ignored)
 
         earley_ast = Earley(grammar).parse(lexer.lex(input_text))
-        slr_ast = parse_with(SLR, NESTED_GRAMMAR_TEXT, NESTED_TERMINALS_TEXT, input_text)
+        slr_ast = parse_with(SLR, NESTED_BNF, input_text)
         assert collect_leaves(earley_ast) == collect_leaves(slr_ast)

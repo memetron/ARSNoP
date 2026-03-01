@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from ...grammar import Grammar, Production
+from ...grammar.grammar import Grammar
+from ...grammar.production import Production
 from ...lexer import Token
 
 
@@ -57,17 +58,19 @@ class Item:
         completed_by (Item | None): The completed item that proved a non-terminal at this step.
     """
 
-    def __init__(self, production: Production, dot: int, input_position: int):
+    def __init__(self, production: Production, dot: int, input_position: int, operation: str | None = None):
         """
         Initializes an Item instance.
         Args:
             production (Production): The production rule associated with the item.
             dot (int): Position of the dot in the production rule.
             input_position (int): Input index where the rule starts matching.
+            operation (str | None): Label for the Earley operation that created this item (traced mode only).
         """
         self.production = production
         self.dot = dot
         self.input_position = input_position
+        self.operation = operation
         self.prev_step: Item | None = None
         self.matched_token: Token | None = None
         self.completed_by: Item | None = None
@@ -100,21 +103,66 @@ class Item:
 
 def _closure(grammar: Grammar, items: set[Item], index: int) -> set[Item]:
     """
-    Computes the closure of a set of items over a grammar.
-    Args:
-        grammar (Grammar): The grammar to use for closure computation.
-        items (set[Item]): The initial set of items.
-        index (int): The index for newly created items.
-    Returns:
-        set[Item]: The augmented set of items.
+    Computes the closure of a set of items for an Earley state.
+
+    Handles both prediction (add items for non-terminals after the dot) and
+    nullable completion (immediately advance items whose next symbol can derive ε
+    within this same state).  The two interact: predicting an ε-production makes
+    its LHS nullable, which then advances any already-predicted item that had that
+    LHS after its dot; conversely, any item added later with a already-nullable LHS
+    after its dot is advanced immediately via the nullable shortcut.
     """
-    new_items = list(items)
-    for item in new_items:
-        if not item.is_completed():
-            next_symbol = item.get_next_symbol()
-            if next_symbol in grammar.non_terminals:
-                for production in grammar.lookup_productions(next_symbol):
-                    new_item = Item(production, 0, index)
-                    if new_item not in new_items:
-                        new_items.append(new_item)
-    return set(new_items)
+    seen: set[tuple[Production, int, int]] = {
+        (it.production, it.dot, it.input_position) for it in items
+    }
+    result = list(items)
+    # Maps lhs → the ε-item that completed it within this state, so we can set
+    # completed_by on items advanced via the nullable shortcut.
+    nullable_completions: dict[str, Item] = {}
+
+    i = 0
+    while i < len(result):
+        item = result[i]
+        i += 1
+
+        if item.is_completed():
+            # Only nullable completions predicted within this state contribute:
+            # items carried in from scanning have input_position < index.
+            if item.input_position != index:
+                continue
+            lhs = item.production.lhs
+            if lhs in nullable_completions:
+                continue
+            nullable_completions[lhs] = item
+            # Advance every item already in the state that was waiting for lhs.
+            for other in list(result):
+                if not other.is_completed() and other.get_next_symbol() == lhs:
+                    key = (other.production, other.dot + 1, other.input_position)
+                    if key not in seen:
+                        seen.add(key)
+                        new_item = Item(other.production, other.dot + 1, other.input_position)
+                        new_item.prev_step = other
+                        new_item.completed_by = item
+                        result.append(new_item)
+        else:
+            next_sym = item.get_next_symbol()
+            if next_sym not in grammar.non_terminals:
+                continue
+            # Prediction
+            for production in grammar.lookup_productions(next_sym):
+                key = (production, 0, index)
+                if key not in seen:
+                    seen.add(key)
+                    result.append(Item(production, 0, index))
+            # Nullable shortcut: if next_sym was already completed as nullable,
+            # advance this item immediately without waiting for the completion step.
+            if next_sym in nullable_completions:
+                key = (item.production, item.dot + 1, item.input_position)
+                if key not in seen:
+                    seen.add(key)
+                    new_item = Item(item.production, item.dot + 1, item.input_position)
+                    new_item.prev_step = item
+                    new_item.completed_by = nullable_completions[next_sym]
+                    result.append(new_item)
+
+    return set(result)

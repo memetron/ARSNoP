@@ -1,8 +1,7 @@
 from flask import Blueprint, jsonify, request
 
-from arsnop.grammar import Grammar
+from arsnop.grammar import Grammar, parse_bnf
 from arsnop.lexer import Lexer
-from arsnop.parser import parse_grammar_text
 from arsnop.parser.earley import Earley
 from arsnop.parser.shift_reduce import LR0, SLR, LR1, LALR, LALR_Brute_Force
 from arsnop.parser.shift_reduce.automaton import Automaton
@@ -25,10 +24,10 @@ _GENERATORS = {
 }
 
 
-def _load_grammar(grammar_text):
-    """Parse grammar text and return (Grammar, terminals_section) or raise."""
-    grammar_section, terminals_section = parse_grammar_text(grammar_text)
-    return Grammar(grammar_section), terminals_section
+def _load_grammar(grammar_text: str) -> tuple[Grammar, Lexer]:
+    """Parse grammar text and return (Grammar, Lexer) or raise."""
+    spec = parse_bnf(grammar_text)
+    return Grammar(spec.rules), Lexer(spec.terminals, spec.ignored)
 
 
 @parser_bp.route("/tables", methods=["POST"])
@@ -50,7 +49,7 @@ def generate_tables():
         }), 400
 
     try:
-        grammar, _ = _load_grammar(grammar_text)
+        grammar, _lexer = _load_grammar(grammar_text)
     except ValueError as e:
         return jsonify({"error": "invalid_format", "message": str(e)}), 400
     except Exception as e:
@@ -83,16 +82,11 @@ def execute_parse():
         }), 400
 
     try:
-        grammar, terminals_section = _load_grammar(grammar_text)
+        grammar, lexer = _load_grammar(grammar_text)
     except ValueError as e:
         return jsonify({"error": "invalid_format", "message": str(e)}), 400
     except Exception as e:
         return jsonify({"error": "grammar_error", "message": str(e)}), 400
-
-    try:
-        lexer = Lexer(terminals_section)
-    except Exception as e:
-        return jsonify({"error": "lexer_error", "message": str(e)}), 400
 
     try:
         tokens = lexer.lex(input_text)

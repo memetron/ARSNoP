@@ -1,5 +1,6 @@
 """Tests for the shared closure primitives."""
 from arsnop.grammar import Grammar, Production
+from arsnop.grammar.bnf_parser import parse_bnf
 from arsnop.parser.shift_reduce.state import Item
 from arsnop.parser.shift_reduce.generators.closure import (
     augmented_start,
@@ -11,10 +12,10 @@ from arsnop.parser.shift_reduce.generators.closure import (
     successor,
 )
 
-from .conftest import SIMPLE_GRAMMAR_TEXT, NULLABLE_GRAMMAR_TEXT
+from .conftest import SIMPLE_BNF, NULLABLE_BNF
 
-GRAMMAR = Grammar(SIMPLE_GRAMMAR_TEXT)       # start ::= expr; expr ::= TOK
-NULLABLE = Grammar(NULLABLE_GRAMMAR_TEXT)     # start ::= A B c; A ::= a | ε; B ::= b | ε
+GRAMMAR = Grammar(parse_bnf(SIMPLE_BNF).rules)   # start ::= expr; expr ::= TOK
+NULLABLE = Grammar(parse_bnf(NULLABLE_BNF).rules) # start ::= A B c; A ::= a | ε; B ::= b | ε
 
 
 class TestAugmentedStart:

@@ -1,7 +1,6 @@
 from flask import Blueprint, jsonify, request
 
-from arsnop.grammar import Grammar
-from arsnop.parser import parse_grammar_text
+from arsnop.grammar import Grammar, parse_bnf
 from ..grammar_store import list_bundled, load_bundled
 from ..serializers import serialize_production
 
@@ -28,7 +27,7 @@ def analyze_grammar():
     grammar_text = data.get("grammar", "")
 
     try:
-        grammar_section, _ = parse_grammar_text(grammar_text)
+        spec = parse_bnf(grammar_text)
     except ValueError:
         return jsonify({
             "error": "invalid_format",
@@ -36,7 +35,7 @@ def analyze_grammar():
         }), 400
 
     try:
-        grammar = Grammar(grammar_section)
+        grammar = Grammar(spec.rules)
     except Exception as e:
         return jsonify({"error": "grammar_error", "message": str(e)}), 400
 

@@ -31,6 +31,7 @@ class BnfSpecTransformer(Transformer):
 
     def __init__(self) -> None:
         self._aux_rules: dict[str, RuleSpec] = {}
+        self._group_counter: int = 0
 
     def bnf_file(self, children: list[Any]) -> BnfSpec:
         """Combine rules and terminals sections into a ``BnfSpec``.
@@ -96,6 +97,28 @@ class BnfSpecTransformer(Transformer):
                 rule = RuleSpec(aux_name, (Rhs((aux_name, id_str)), Rhs((id_str,))), inline=True)
             self._aux_rules[aux_name] = rule
         return aux_name
+
+    def _desugar_group(self, alts: list[Rhs]) -> str:
+        """Return a fresh aux-rule name for a parenthesised group of alternatives.
+
+        Creates and registers ``_group_N ::= alts... ;`` (inline) on first call.
+        Each call produces a new name so that distinct groups never share a rule.
+        """
+        name = f"_group_{self._group_counter}"
+        self._group_counter += 1
+        self._aux_rules[name] = RuleSpec(name, tuple(alts), inline=True)
+        return name
+
+    def atom(self, children: list[Any]) -> str:
+        """Return the symbol name for an atom (plain ID or parenthesised group).
+
+        children: [id_str] for a plain identifier, or
+                  ["(", alts_list, ")"] for a grouped expression.
+        """
+        if len(children) == 1:
+            return children[0]
+        alts: list[Rhs] = children[1]
+        return self._desugar_group(alts)
 
     def alternative(self, children: list[Any]) -> Rhs:
         """Build an ``Alternative`` incrementally from left-recursive children.

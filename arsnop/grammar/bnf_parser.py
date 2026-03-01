@@ -29,6 +29,8 @@ _LEXER = Lexer([
     TerminalSpec("WS",           r"[ \t\n\r]+"),
     TerminalSpec("ID",           r'[a-zA-Z_]\w*'),
     TerminalSpec("MODIFIER",    r"\*|\+|\?"),
+    TerminalSpec("OPEN_PAREN",    r"\("),
+    TerminalSpec("CLOSE_PAREN",   r"\)"),
 ], ignored=["WS"])
 
 _GRAMMAR = Grammar([
@@ -47,9 +49,13 @@ _GRAMMAR = Grammar([
         Rhs(("alternative",)),
     )),
     RuleSpec("alternative", (
-        Rhs(("alternative", "ID", "MODIFIER")),
-        Rhs(("alternative", "ID")),
+        Rhs(("alternative", "atom", "MODIFIER")),
+        Rhs(("alternative", "atom")),
         Rhs(()),
+    )),
+    RuleSpec("atom", (
+        Rhs(("ID",)),
+        Rhs(("OPEN_PAREN", "alternatives", "CLOSE_PAREN")),
     )),
     RuleSpec("terminals_section", (
         Rhs(("terminals_section", "terminal_def")),

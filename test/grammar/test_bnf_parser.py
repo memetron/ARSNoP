@@ -294,3 +294,89 @@ class TestModifiers:
         spec = parse_bnf(text)
         start = self._aux(spec, "start")
         assert start.alternatives == (Rhs(("_A_opt", "_B_star")),)
+
+
+# ---------------------------------------------------------------------------
+# EBNF grouping
+# ---------------------------------------------------------------------------
+
+class TestGrouping:
+    """BnfSpecTransformer desugars (...) groups into inline auxiliary rules."""
+
+    def _aux(self, spec: BnfSpec, name: str) -> RuleSpec:
+        return next(r for r in spec.rules if r.lhs == name)
+
+    def _group_rules(self, spec: BnfSpec) -> list[RuleSpec]:
+        return [r for r in spec.rules if r.lhs.startswith("_group_")]
+
+    def test_bare_group_creates_aux_rule(self):
+        text = ":GRAMMAR\nstart ::= (A B) ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        groups = self._group_rules(spec)
+        assert len(groups) == 1
+
+    def test_bare_group_aux_rule_is_inline(self):
+        text = ":GRAMMAR\nstart ::= (A B) ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        group = self._group_rules(spec)[0]
+        assert group.inline is True
+
+    def test_bare_group_aux_rule_alternatives(self):
+        text = ":GRAMMAR\nstart ::= (A B) ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        group = self._group_rules(spec)[0]
+        assert group.alternatives == (Rhs(("A", "B")),)
+
+    def test_bare_group_replaces_symbol_in_parent(self):
+        text = ":GRAMMAR\nstart ::= (A B) ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        group_name = self._group_rules(spec)[0].lhs
+        start = self._aux(spec, "start")
+        assert start.alternatives == (Rhs((group_name,)),)
+
+    def test_group_with_optional_modifier(self):
+        text = ":GRAMMAR\nstart ::= (A B)? ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        groups = self._group_rules(spec)
+        assert len(groups) == 1
+        group_name = groups[0].lhs
+        opt_name = f"_{group_name}_opt"
+        assert any(r.lhs == opt_name for r in spec.rules)
+
+    def test_group_with_star_modifier(self):
+        text = ":GRAMMAR\nstart ::= (A B)* ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        group_name = self._group_rules(spec)[0].lhs
+        star_name = f"_{group_name}_star"
+        star = self._aux(spec, star_name)
+        assert Rhs((star_name, group_name)) in star.alternatives
+        assert Rhs(()) in star.alternatives
+
+    def test_group_with_plus_modifier(self):
+        text = ":GRAMMAR\nstart ::= (A B)+ ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        group_name = self._group_rules(spec)[0].lhs
+        plus_name = f"_{group_name}_plus"
+        plus = self._aux(spec, plus_name)
+        assert Rhs((plus_name, group_name)) in plus.alternatives
+        assert Rhs((group_name,)) in plus.alternatives
+
+    def test_group_with_alternatives(self):
+        text = ":GRAMMAR\nstart ::= (A | B)* ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        group = self._group_rules(spec)[0]
+        assert Rhs(("A",)) in group.alternatives
+        assert Rhs(("B",)) in group.alternatives
+
+    def test_multiple_groups_get_distinct_names(self):
+        text = ":GRAMMAR\nstart ::= (A B) (C D) ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\nC /c/ ;\nD /d/ ;\n"
+        spec = parse_bnf(text)
+        groups = self._group_rules(spec)
+        assert len(groups) == 2
+        assert groups[0].lhs != groups[1].lhs
+
+    def test_nested_group(self):
+        text = ":GRAMMAR\nstart ::= ((A B) C)? ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\nC /c/ ;\n"
+        spec = parse_bnf(text)
+        groups = self._group_rules(spec)
+        assert len(groups) == 2

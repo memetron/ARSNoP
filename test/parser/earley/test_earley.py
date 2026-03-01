@@ -87,3 +87,45 @@ class TestEarleyParser:
         tokens = lexer.lex("a a")
         with pytest.raises(ValueError):
             engine.parse(tokens)
+
+
+_EBNF_BNF = (
+    ":GRAMMAR\n"
+    "start ::= a* ;\n"
+    "a ::= A ;\n"
+    ":TERMINALS\n"
+    "A /A/ ;\n"
+)
+
+
+def _parse_ebnf(input_text: str):
+    spec = parse_bnf(_EBNF_BNF)
+    return Earley(Grammar(spec.rules)).parse(Lexer(spec.terminals, spec.ignored).lex(input_text))
+
+
+class TestEarleyModifierInlining:
+    """EBNF-generated aux rule nodes should be absent from the Earley AST."""
+
+    def test_star_empty_start_has_no_children(self):
+        ast = _parse_ebnf("")
+        assert ast.content == "start"
+        assert ast.children == []
+
+    def test_star_single_child_directly_on_start(self):
+        ast = _parse_ebnf("A")
+        assert ast.content == "start"
+        assert len(ast.children) == 1
+        assert ast.children[0].content == "a"
+
+    def test_star_multiple_children_directly_on_start(self):
+        ast = _parse_ebnf("AAA")
+        assert ast.content == "start"
+        assert len(ast.children) == 3
+
+    def test_star_no_aux_node_in_tree(self):
+        ast = _parse_ebnf("AAA")
+        assert all(child.content != "_a_star" for child in ast.children)
+
+    def test_star_children_are_a_nodes(self):
+        ast = _parse_ebnf("AAA")
+        assert all(child.content == "a" for child in ast.children)

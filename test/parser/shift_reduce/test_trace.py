@@ -126,6 +126,56 @@ class TestTraceASTConsistency:
         assert len(result.tokens) == len(tokens)
 
 
+_EBNF_BNF_TEXT = (
+    ":GRAMMAR\n"
+    "start ::= a* ;\n"
+    "a ::= A ;\n"
+    ":TERMINALS\n"
+    "A /A/ ;\n"
+)
+
+_EBNF_SPEC = parse_bnf(_EBNF_BNF_TEXT)
+
+
+def _build_ebnf_automaton():
+    return LR1().generate(Grammar(_EBNF_SPEC.rules))
+
+
+def _lex_ebnf(text: str):
+    return Lexer(_EBNF_SPEC.terminals, _EBNF_SPEC.ignored).lex(text)
+
+
+class TestModifierInlining:
+    """EBNF-generated aux rule nodes should be absent from the AST entirely."""
+
+    def _ast(self, input_text: str):
+        return _build_ebnf_automaton().parse(_lex_ebnf(input_text))
+
+    def test_star_empty_start_has_no_children(self):
+        ast = self._ast("")
+        assert ast.content == "start"
+        assert ast.children == []
+
+    def test_star_single_child_directly_on_start(self):
+        ast = self._ast("A")
+        assert ast.content == "start"
+        assert len(ast.children) == 1
+        assert ast.children[0].content == "a"
+
+    def test_star_multiple_children_directly_on_start(self):
+        ast = self._ast("AAA")
+        assert ast.content == "start"
+        assert len(ast.children) == 3
+
+    def test_star_no_aux_node_in_tree(self):
+        ast = self._ast("AAA")
+        assert all(child.content != "_a_star" for child in ast.children)
+
+    def test_star_children_are_a_nodes(self):
+        ast = self._ast("AAA")
+        assert all(child.content == "a" for child in ast.children)
+
+
 class TestTraceError:
     def test_error_on_unexpected_token(self):
         automaton = _build_automaton()

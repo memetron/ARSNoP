@@ -10,29 +10,46 @@ import re
 from typing import Any
 
 from ..transformer import Transformer
-from .bnf_types import Rhs, BnfSpec, RuleSpec, TerminalSpec
+from .bnf_types import InlineType, Rhs, BnfSpec, RuleSpec, TerminalSpec
+
+_MODIFIER_SUFFIX: dict[str, str] = {"?": "opt", "*": "star", "+": "plus"}
 
 
 class BnfSpecTransformer(Transformer):
     """Transforms a BNF parse tree into ``BnfSpec`` (and its component types).
 
-    Subclass this to handle EBNF extensions or other grammar variants.
+    Supports EBNF modifiers (``?``, ``*``, ``+``) by desugaring them into
+    auxiliary BNF rules appended to the spec:
+
+    - ``A?``  →  ``_A_opt  ::= A | ;``
+    - ``A*``  →  ``_A_star ::= _A_star A | ;``
+    - ``A+``  →  ``_A_plus ::= _A_plus A | A ;``
+
     Override individual visit methods — the base ``Transformer`` dispatches
     by node name via ``getattr``.
     """
+
+    def __init__(self) -> None:
+        self._aux_rules: dict[str, RuleSpec] = {}
+        self._group_counter: int = 0
+        self._inline_terminal_counter: int = 0
+        self._aux_terminals: dict[str, TerminalSpec] = {}
 
     def bnf_file(self, children: list[Any]) -> BnfSpec:
         """Combine rules and terminals sections into a ``BnfSpec``.
 
         children: [":GRAMMAR", rules_list, ":TERMINALS", (terminals, ignored)]
+
+        Any auxiliary rules generated from EBNF modifiers are appended after
+        the user-defined rules.
         """
         rules: list[RuleSpec] = children[1]
         terminals: list[TerminalSpec]
         ignored: list[str]
         terminals, ignored = children[3]
         return BnfSpec(
-            rules=tuple(rules),
-            terminals=tuple(terminals),
+            rules=tuple(rules) + tuple(self._aux_rules.values()),
+            terminals=tuple(terminals) + tuple(self._aux_terminals.values()),
             ignored=tuple(ignored),
         )
 
@@ -50,28 +67,103 @@ class BnfSpecTransformer(Transformer):
 
         children: [lhs_str, "::=", alts_list, ";"]
         """
-        lhs: str = children[0]
-        alternatives: list[Rhs] = children[2]
-        return RuleSpec(lhs=lhs, alternatives=tuple(alternatives))
-
+        lhs: str = children[1]
+        alternatives: list[Rhs] = children[3]
+        return RuleSpec(lhs=lhs, alternatives=tuple(alternatives), inline=children[0])
+    
+    def optional_inline(self, children: list[Any]) -> InlineType:
+        """Return "_" if the rule is marked inline, or None otherwise."""
+        if not children:
+            return InlineType.NONE
+        if children[0] == "_":
+            return InlineType.INLINE
+        return InlineType.CONDITIONAL_INLINE
+    
     def alternatives(self, children: list[Any]) -> list[Rhs]:
         """Incrementally build the alternatives list from left-recursive children.
 
         children: [alt] for base case, or [alts_list, "|", alt] for recursive.
         """
+        if len(children) == 2:
+            return [children[0].with_label(children[1])]
+        return children[0] + [children[2].with_label(children[3])]
+
+    def optional_label(self, children: list[Any]) -> str | None:
+        """Return the label string if present, or None otherwise.
+
+        children: [":", label_str] if a label is present, or [] if not.
+        """
+        if not children:
+            return None
+        return children[1]
+    
+    def _desugar(self, id_str: str, modifier: str) -> str:
+        """Return the aux-rule name for ``id_str`` modified by ``modifier``.
+
+        Generates and caches the corresponding BNF rule on first call:
+
+        - ``?``  →  ``_X_opt  ::= X | ;``
+        - ``*``  →  ``_X_star ::= _X_star X | ;``
+        - ``+``  →  ``_X_plus ::= _X_plus X | X ;``
+        """
+        aux_name = f"_{id_str}_{_MODIFIER_SUFFIX[modifier]}"
+        if aux_name not in self._aux_rules:
+            if modifier == "?":
+                rule = RuleSpec(aux_name, (Rhs((id_str,)), Rhs(())), inline=InlineType.INLINE)
+            elif modifier == "*":
+                rule = RuleSpec(aux_name, (Rhs((aux_name, id_str)), Rhs(())), inline=InlineType.INLINE)
+            else:  # "+"
+                rule = RuleSpec(aux_name, (Rhs((aux_name, id_str)), Rhs((id_str,))), inline=InlineType.INLINE)
+            self._aux_rules[aux_name] = rule
+        return aux_name
+
+    def _desugar_group(self, alts: list[Rhs]) -> str:
+        """Return a fresh aux-rule name for a parenthesised group of alternatives.
+
+        Creates and registers ``_group_N ::= alts... ;`` (inline) on first call.
+        Each call produces a new name so that distinct groups never share a rule.
+        """
+        name = f"_group_{self._group_counter}"
+        self._group_counter += 1
+        self._aux_rules[name] = RuleSpec(name, tuple(alts), inline=InlineType.INLINE)
+        return name
+    
+    def _desugar_inline_terminal(self, terminal_expr: str) -> str:
+        name = f"_INLINE_{self._inline_terminal_counter}"
+        self._inline_terminal_counter += 1
+        if terminal_expr.startswith('"'):
+            pattern = re.escape(terminal_expr[1:-1])
+        else:
+            pattern = terminal_expr[1:-1]
+        self._aux_terminals[name] = TerminalSpec(name, pattern=pattern, inline=True)
+        return name
+
+    def atom(self, children: list[Any]) -> str:
+        """Return the symbol name for an atom (plain ID or parenthesised group).
+
+        children: [id_str] for a plain identifier, or
+                  ["(", alts_list, ")"] for a grouped expression.
+        """
         if len(children) == 1:
-            return [children[0]]
-        return children[0] + [children[2]]
+            if children[0].startswith('"') or children[0].startswith('/'):
+                return self._desugar_inline_terminal(children[0])
+            return children[0]
+        alts: list[Rhs] = children[1]
+        return self._desugar_group(alts)
 
     def alternative(self, children: list[Any]) -> Rhs:
         """Build an ``Alternative`` incrementally from left-recursive children.
 
-        children: [] for empty base case, or [prev_alt, id_str] for recursive.
+        children: [] for empty base case, [prev_alt, id_str] for a plain
+        symbol, or [prev_alt, id_str, modifier] for an EBNF modifier.
         """
         if not children:
             return Rhs(symbols=())
         prev: Rhs = children[0]
         id_str: str = children[1]
+        if len(children) == 3:
+            modifier: str = children[2]
+            return Rhs(symbols=prev.symbols + (self._desugar(id_str, modifier),))
         return Rhs(symbols=prev.symbols + (id_str,))
 
     def terminals_section(

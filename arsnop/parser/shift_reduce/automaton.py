@@ -1,8 +1,10 @@
 import copy
 
+from ...grammar.bnf_types import InlineType
 from ...lexer import Token
 from ...ast import AST
 from ..parsingEngine import ParsingEngine
+from ..tree import TreeItem, make_tree_item, splice_children
 from .trace import ShiftReduceTrace, TraceAction, TraceStep
 from .types import GotoTable, ActionTable, Action
 
@@ -26,7 +28,7 @@ class Automaton(ParsingEngine):
         """Run shift-reduce parsing and record each step as a TraceStep."""
         buffer = stream + [Token("$", "$")]
         stack: list[int] = [0]
-        tree_stack: list[AST] = []
+        tree_stack: list[TreeItem] = []
         index = 0
         steps: list[TraceStep] = []
 
@@ -52,22 +54,26 @@ class Automaton(ParsingEngine):
             ))
 
             if action[0] == "shift":
-                tree_stack.append(AST(curr_token))
+                tree_stack.append([] if curr_token.inline else AST(curr_token))
                 stack.append(action[1])
                 index += 1
             elif action[0] == "reduce":
                 prod = action[1]
-                children: list[AST] = []
+                raw: list[TreeItem] = []
                 for _ in prod.rhs:
                     stack.pop()
-                    children.append(tree_stack.pop())
-                tree_stack.append(AST(prod.lhs, list(reversed(copy.deepcopy(children)))))
+                    raw.append(tree_stack.pop())
+                children = splice_children(reversed(raw))
+                label = prod.label if prod.label is not None else prod.lhs
+                tree_stack.append(make_tree_item(label, prod.inline if prod.label is None else InlineType.NONE, copy.deepcopy(children)))
                 stack.append(self._goto[(stack[-1], prod.lhs)])
             elif action[0] == "accept":
+                top = tree_stack[0] if tree_stack else None
+                ast = top if isinstance(top, AST) else None
                 return ShiftReduceTrace(
                     tokens=tuple(stream),
                     steps=tuple(steps),
-                    ast=tree_stack[0] if tree_stack else None,
+                    ast=ast,
                 )
 
         return ShiftReduceTrace(

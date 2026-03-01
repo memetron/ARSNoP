@@ -53,7 +53,7 @@ class Grammar:
         for spec in rules:
             self.non_terminals.add(spec.lhs)
             for alt in spec.alternatives:
-                self.productions.append(Production(spec.lhs, alt.symbols))
+                self.productions.append(Production(spec.lhs, alt.symbols, spec.inline, alt.label))
                 self.terminals.update(alt.symbols)
 
         self.terminals -= self.non_terminals

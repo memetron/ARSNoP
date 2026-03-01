@@ -11,6 +11,7 @@ from arsnop.grammar import (
     parse_bnf,
     parse_bnf_ast,
 )
+from arsnop.grammar.bnf_types import InlineType
 from arsnop.ast import AST
 
 
@@ -156,8 +157,9 @@ class TestParseBnfAst:
         rules_section = tree.children[1]
         rule = rules_section.children[1]
         assert rule.content == "rule"
-        # First child of 'rule' is a leaf Token node for the LHS.
-        lhs_node = rule.children[0]
+        # rule ::= optional_inline ID ARROW alternatives SEMI
+        # First child is optional_inline; second child is the ID token.
+        lhs_node = rule.children[1]
         from arsnop.lexer.token import Token as Tok
         assert isinstance(lhs_node.content, Tok)
         assert lhs_node.content.lexeme == "start"
@@ -166,11 +168,13 @@ class TestParseBnfAst:
         tree = parse_bnf_ast(self._SIMPLE)
         rules_section = tree.children[1]
         rule = rules_section.children[1]
-        # rule ::= ID ARROW alternatives SEMI — alternatives is at index 2
-        alts = rule.children[2]
+        # rule ::= optional_inline ID ARROW alternatives SEMI — alternatives is at index 3
+        alts = rule.children[3]
         assert alts.content == "alternatives"
-        assert len(alts.children) == 1
+        # alternatives ::= alternative optional_label — two children
+        assert len(alts.children) == 2
         assert alts.children[0].content == "alternative"
+        assert alts.children[1].content == "optional_label"
 
     def test_terminal_def_structure(self):
         tree = parse_bnf_ast(self._SIMPLE)
@@ -217,3 +221,220 @@ class TestParseBnfAst:
     def test_empty_string_raises(self):
         with pytest.raises((ValueError, Exception)):
             parse_bnf_ast("")
+
+
+# ---------------------------------------------------------------------------
+# EBNF modifier desugaring
+# ---------------------------------------------------------------------------
+
+class TestModifiers:
+    """BnfSpecTransformer desugars ?, *, + into auxiliary BNF rules."""
+
+    def _aux(self, spec: BnfSpec, name: str) -> RuleSpec:
+        return next(r for r in spec.rules if r.lhs == name)
+
+    def test_optional_adds_aux_rule(self):
+        text = ":GRAMMAR\nstart ::= A? ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        assert any(r.lhs == "_A_opt" for r in spec.rules)
+
+    def test_optional_aux_rule_alts(self):
+        text = ":GRAMMAR\nstart ::= A? ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        aux = self._aux(spec, "_A_opt")
+        assert Rhs(("A",)) in aux.alternatives
+        assert Rhs(()) in aux.alternatives
+
+    def test_optional_replaces_symbol(self):
+        text = ":GRAMMAR\nstart ::= A? ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        start = self._aux(spec, "start")
+        assert start.alternatives == (Rhs(("_A_opt",)),)
+
+    def test_star_adds_aux_rule(self):
+        text = ":GRAMMAR\nstart ::= A* ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        assert any(r.lhs == "_A_star" for r in spec.rules)
+
+    def test_star_aux_rule_alts(self):
+        text = ":GRAMMAR\nstart ::= A* ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        aux = self._aux(spec, "_A_star")
+        assert Rhs(("_A_star", "A")) in aux.alternatives
+        assert Rhs(()) in aux.alternatives
+
+    def test_star_replaces_symbol(self):
+        text = ":GRAMMAR\nstart ::= A* ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        start = self._aux(spec, "start")
+        assert start.alternatives == (Rhs(("_A_star",)),)
+
+    def test_plus_adds_aux_rule(self):
+        text = ":GRAMMAR\nstart ::= A+ ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        assert any(r.lhs == "_A_plus" for r in spec.rules)
+
+    def test_plus_aux_rule_alts(self):
+        text = ":GRAMMAR\nstart ::= A+ ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        aux = self._aux(spec, "_A_plus")
+        assert Rhs(("_A_plus", "A")) in aux.alternatives
+        assert Rhs(("A",)) in aux.alternatives
+
+    def test_plus_replaces_symbol(self):
+        text = ":GRAMMAR\nstart ::= A+ ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        start = self._aux(spec, "start")
+        assert start.alternatives == (Rhs(("_A_plus",)),)
+
+    def test_deduplication(self):
+        """A? appearing in two rules generates only one _A_opt rule."""
+        text = ":GRAMMAR\nfoo ::= A? ;\nbar ::= A? ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        assert sum(1 for r in spec.rules if r.lhs == "_A_opt") == 1
+
+    def test_multiple_modifiers_in_one_alt(self):
+        text = ":GRAMMAR\nstart ::= A? B* ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        start = self._aux(spec, "start")
+        assert start.alternatives == (Rhs(("_A_opt", "_B_star")),)
+
+
+# ---------------------------------------------------------------------------
+# EBNF grouping
+# ---------------------------------------------------------------------------
+
+class TestGrouping:
+    """BnfSpecTransformer desugars (...) groups into inline auxiliary rules."""
+
+    def _aux(self, spec: BnfSpec, name: str) -> RuleSpec:
+        return next(r for r in spec.rules if r.lhs == name)
+
+    def _group_rules(self, spec: BnfSpec) -> list[RuleSpec]:
+        return [r for r in spec.rules if r.lhs.startswith("_group_")]
+
+    def test_bare_group_creates_aux_rule(self):
+        text = ":GRAMMAR\nstart ::= (A B) ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        groups = self._group_rules(spec)
+        assert len(groups) == 1
+
+    def test_bare_group_aux_rule_is_inline(self):
+        text = ":GRAMMAR\nstart ::= (A B) ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        group = self._group_rules(spec)[0]
+        assert group.inline == InlineType.INLINE
+
+    def test_bare_group_aux_rule_alternatives(self):
+        text = ":GRAMMAR\nstart ::= (A B) ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        group = self._group_rules(spec)[0]
+        assert group.alternatives == (Rhs(("A", "B")),)
+
+    def test_bare_group_replaces_symbol_in_parent(self):
+        text = ":GRAMMAR\nstart ::= (A B) ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        group_name = self._group_rules(spec)[0].lhs
+        start = self._aux(spec, "start")
+        assert start.alternatives == (Rhs((group_name,)),)
+
+    def test_group_with_optional_modifier(self):
+        text = ":GRAMMAR\nstart ::= (A B)? ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        groups = self._group_rules(spec)
+        assert len(groups) == 1
+        group_name = groups[0].lhs
+        opt_name = f"_{group_name}_opt"
+        assert any(r.lhs == opt_name for r in spec.rules)
+
+    def test_group_with_star_modifier(self):
+        text = ":GRAMMAR\nstart ::= (A B)* ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        group_name = self._group_rules(spec)[0].lhs
+        star_name = f"_{group_name}_star"
+        star = self._aux(spec, star_name)
+        assert Rhs((star_name, group_name)) in star.alternatives
+        assert Rhs(()) in star.alternatives
+
+    def test_group_with_plus_modifier(self):
+        text = ":GRAMMAR\nstart ::= (A B)+ ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        group_name = self._group_rules(spec)[0].lhs
+        plus_name = f"_{group_name}_plus"
+        plus = self._aux(spec, plus_name)
+        assert Rhs((plus_name, group_name)) in plus.alternatives
+        assert Rhs((group_name,)) in plus.alternatives
+
+    def test_group_with_alternatives(self):
+        text = ":GRAMMAR\nstart ::= (A | B)* ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        group = self._group_rules(spec)[0]
+        assert Rhs(("A",)) in group.alternatives
+        assert Rhs(("B",)) in group.alternatives
+
+    def test_multiple_groups_get_distinct_names(self):
+        text = ":GRAMMAR\nstart ::= (A B) (C D) ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\nC /c/ ;\nD /d/ ;\n"
+        spec = parse_bnf(text)
+        groups = self._group_rules(spec)
+        assert len(groups) == 2
+        assert groups[0].lhs != groups[1].lhs
+
+    def test_nested_group(self):
+        text = ":GRAMMAR\nstart ::= ((A B) C)? ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\nC /c/ ;\n"
+        spec = parse_bnf(text)
+        groups = self._group_rules(spec)
+        assert len(groups) == 2
+
+
+# ---------------------------------------------------------------------------
+# Inline rules
+# ---------------------------------------------------------------------------
+
+class TestInlineRules:
+    """Rules prefixed with ``_`` are marked ``inline=True`` in the BnfSpec."""
+
+    def _rule(self, spec: BnfSpec, name: str) -> RuleSpec:
+        return next(r for r in spec.rules if r.lhs == name)
+
+    _TEXT = (
+        ":GRAMMAR\n"
+        "start ::= a ;\n"
+        "_ a ::= A ;\n"
+        ":TERMINALS\n"
+        "A /a/ ;\n"
+    )
+
+    def test_inline_flag_set(self):
+        spec = parse_bnf(self._TEXT)
+        assert self._rule(spec, "a").inline == InlineType.INLINE
+
+    def test_non_inline_flag_not_set(self):
+        spec = parse_bnf(self._TEXT)
+        assert self._rule(spec, "start").inline == InlineType.NONE
+
+    def test_lhs_is_rule_name_not_underscore(self):
+        spec = parse_bnf(self._TEXT)
+        lhs_names = [r.lhs for r in spec.rules]
+        assert "a" in lhs_names
+        assert "_" not in lhs_names
+
+    def test_inline_rule_alternatives(self):
+        spec = parse_bnf(self._TEXT)
+        rule = self._rule(spec, "a")
+        assert rule.alternatives == (Rhs(("A",)),)
+
+    def test_inline_rule_multi_alternative(self):
+        text = (
+            ":GRAMMAR\n"
+            "start ::= item ;\n"
+            "_ item ::= A | B ;\n"
+            ":TERMINALS\n"
+            "A /a/ ;\n"
+            "B /b/ ;\n"
+        )
+        spec = parse_bnf(text)
+        rule = self._rule(spec, "item")
+        assert rule.inline == InlineType.INLINE
+        syms = {alt.symbols for alt in rule.alternatives}
+        assert ("A",) in syms
+        assert ("B",) in syms

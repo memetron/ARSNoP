@@ -27,7 +27,13 @@ _LEXER = Lexer([
     TerminalSpec("QUOTED",       r'"(?:[^"\\]|\\.)*"'),
     TerminalSpec("REGEX",        r'/(?:[^/\\]|\\.)*/' ),
     TerminalSpec("WS",           r"[ \t\n\r]+"),
-    TerminalSpec("ID",            r'[a-zA-Z_]\w*'),
+    TerminalSpec("ID",           r'[a-zA-Z]\w*'),
+    TerminalSpec("MODIFIER",    r"\*|\+|\?"),
+    TerminalSpec("OPEN_PAREN",    r"\("),
+    TerminalSpec("CLOSE_PAREN",   r"\)"),
+    TerminalSpec("INLINE", r"_"),
+    TerminalSpec("CONDITIONAL_INLINE", r"_\?"),
+    TerminalSpec("LABEL_MARKER", r":"),
 ], ignored=["WS"])
 
 _GRAMMAR = Grammar([
@@ -38,16 +44,33 @@ _GRAMMAR = Grammar([
         Rhs(("rules_section", "rule")),
         Rhs(()),
     )),
+    RuleSpec("optional_inline", (
+        Rhs(("INLINE",)),
+        Rhs(("CONDITIONAL_INLINE",)),
+        Rhs(()),
+    )),
     RuleSpec("rule", (
-        Rhs(("ID", "ARROW", "alternatives", "SEMI")),
+        Rhs(("optional_inline", "ID", "ARROW", "alternatives", "SEMI")),
     )),
     RuleSpec("alternatives", (
-        Rhs(("alternatives", "PIPE", "alternative")),
-        Rhs(("alternative",)),
+        Rhs(("alternatives", "PIPE", "alternative", "optional_label")),
+        Rhs(("alternative", "optional_label")),
+    )),
+    RuleSpec("optional_label", (
+        Rhs(("LABEL_MARKER", "ID")),
+        Rhs(()),
     )),
     RuleSpec("alternative", (
-        Rhs(("alternative", "ID")),
+        Rhs(("alternative", "atom", "MODIFIER")),
+        Rhs(("alternative", "atom", "CONDITIONAL_INLINE")),
+        Rhs(("alternative", "atom")),
         Rhs(()),
+    )),
+    RuleSpec("atom", (
+        Rhs(("ID",)),
+        Rhs(("QUOTED",)),
+        Rhs(("REGEX",)),
+        Rhs(("OPEN_PAREN", "alternatives", "CLOSE_PAREN")),
     )),
     RuleSpec("terminals_section", (
         Rhs(("terminals_section", "terminal_def")),

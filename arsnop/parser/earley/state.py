@@ -58,17 +58,19 @@ class Item:
         completed_by (Item | None): The completed item that proved a non-terminal at this step.
     """
 
-    def __init__(self, production: Production, dot: int, input_position: int):
+    def __init__(self, production: Production, dot: int, input_position: int, operation: str | None = None):
         """
         Initializes an Item instance.
         Args:
             production (Production): The production rule associated with the item.
             dot (int): Position of the dot in the production rule.
             input_position (int): Input index where the rule starts matching.
+            operation (str | None): Label for the Earley operation that created this item (traced mode only).
         """
         self.production = production
         self.dot = dot
         self.input_position = input_position
+        self.operation = operation
         self.prev_step: Item | None = None
         self.matched_token: Token | None = None
         self.completed_by: Item | None = None

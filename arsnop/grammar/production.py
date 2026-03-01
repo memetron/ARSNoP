@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from arsnop.grammar.bnf_types import InlineType
+
 
 @dataclass(frozen=True)
 class Production:
@@ -14,7 +16,8 @@ class Production:
 
     lhs: str
     rhs: tuple[str, ...]
-    inline: bool = False
+    inline: InlineType = InlineType.NONE
+    label: str | None = None
 
     def __str__(self) -> str:
         return f"{self.lhs} ::= {' '.join(self.rhs)}"

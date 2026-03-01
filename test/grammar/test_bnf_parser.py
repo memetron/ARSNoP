@@ -11,6 +11,7 @@ from arsnop.grammar import (
     parse_bnf,
     parse_bnf_ast,
 )
+from arsnop.grammar.bnf_types import InlineType
 from arsnop.ast import AST
 
 
@@ -170,8 +171,10 @@ class TestParseBnfAst:
         # rule ::= optional_inline ID ARROW alternatives SEMI — alternatives is at index 3
         alts = rule.children[3]
         assert alts.content == "alternatives"
-        assert len(alts.children) == 1
+        # alternatives ::= alternative optional_label — two children
+        assert len(alts.children) == 2
         assert alts.children[0].content == "alternative"
+        assert alts.children[1].content == "optional_label"
 
     def test_terminal_def_structure(self):
         tree = parse_bnf_ast(self._SIMPLE)
@@ -320,7 +323,7 @@ class TestGrouping:
         text = ":GRAMMAR\nstart ::= (A B) ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
         spec = parse_bnf(text)
         group = self._group_rules(spec)[0]
-        assert group.inline is True
+        assert group.inline == InlineType.INLINE
 
     def test_bare_group_aux_rule_alternatives(self):
         text = ":GRAMMAR\nstart ::= (A B) ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
@@ -403,11 +406,11 @@ class TestInlineRules:
 
     def test_inline_flag_set(self):
         spec = parse_bnf(self._TEXT)
-        assert self._rule(spec, "a").inline is True
+        assert self._rule(spec, "a").inline == InlineType.INLINE
 
     def test_non_inline_flag_not_set(self):
         spec = parse_bnf(self._TEXT)
-        assert self._rule(spec, "start").inline is False
+        assert self._rule(spec, "start").inline == InlineType.NONE
 
     def test_lhs_is_rule_name_not_underscore(self):
         spec = parse_bnf(self._TEXT)
@@ -431,7 +434,7 @@ class TestInlineRules:
         )
         spec = parse_bnf(text)
         rule = self._rule(spec, "item")
-        assert rule.inline is True
+        assert rule.inline == InlineType.INLINE
         syms = {alt.symbols for alt in rule.alternatives}
         assert ("A",) in syms
         assert ("B",) in syms

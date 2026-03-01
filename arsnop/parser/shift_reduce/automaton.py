@@ -1,5 +1,6 @@
 import copy
 
+from ...grammar.bnf_types import InlineType
 from ...lexer import Token
 from ...ast import AST
 from ..parsingEngine import ParsingEngine
@@ -63,7 +64,8 @@ class Automaton(ParsingEngine):
                     stack.pop()
                     raw.append(tree_stack.pop())
                 children = splice_children(reversed(raw))
-                tree_stack.append(make_tree_item(prod.lhs, prod.inline, copy.deepcopy(children)))
+                label = prod.label if prod.label is not None else prod.lhs
+                tree_stack.append(make_tree_item(label, prod.inline if prod.label is None else InlineType.NONE, copy.deepcopy(children)))
                 stack.append(self._goto[(stack[-1], prod.lhs)])
             elif action[0] == "accept":
                 top = tree_stack[0] if tree_stack else None

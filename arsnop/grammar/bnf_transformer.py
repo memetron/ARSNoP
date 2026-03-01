@@ -10,7 +10,7 @@ import re
 from typing import Any
 
 from ..transformer import Transformer
-from .bnf_types import Rhs, BnfSpec, RuleSpec, TerminalSpec
+from .bnf_types import InlineType, Rhs, BnfSpec, RuleSpec, TerminalSpec
 
 _MODIFIER_SUFFIX: dict[str, str] = {"?": "opt", "*": "star", "+": "plus"}
 
@@ -67,24 +67,36 @@ class BnfSpecTransformer(Transformer):
 
         children: [lhs_str, "::=", alts_list, ";"]
         """
-        is_inline: bool = children[0]
         lhs: str = children[1]
         alternatives: list[Rhs] = children[3]
-        return RuleSpec(lhs=lhs, alternatives=tuple(alternatives), inline=is_inline)
+        return RuleSpec(lhs=lhs, alternatives=tuple(alternatives), inline=children[0])
     
-    def optional_inline(self, children: list[Any]) -> bool:
-        """Return "_" if the rule is marked inline, or "" otherwise."""
-        return bool(children)
+    def optional_inline(self, children: list[Any]) -> InlineType:
+        """Return "_" if the rule is marked inline, or None otherwise."""
+        if not children:
+            return InlineType.NONE
+        if children[0] == "_":
+            return InlineType.INLINE
+        return InlineType.CONDITIONAL_INLINE
     
     def alternatives(self, children: list[Any]) -> list[Rhs]:
         """Incrementally build the alternatives list from left-recursive children.
 
         children: [alt] for base case, or [alts_list, "|", alt] for recursive.
         """
-        if len(children) == 1:
-            return [children[0]]
-        return children[0] + [children[2]]
+        if len(children) == 2:
+            return [children[0].with_label(children[1])]
+        return children[0] + [children[2].with_label(children[3])]
 
+    def optional_label(self, children: list[Any]) -> str | None:
+        """Return the label string if present, or None otherwise.
+
+        children: [":", label_str] if a label is present, or [] if not.
+        """
+        if not children:
+            return None
+        return children[1]
+    
     def _desugar(self, id_str: str, modifier: str) -> str:
         """Return the aux-rule name for ``id_str`` modified by ``modifier``.
 
@@ -97,11 +109,11 @@ class BnfSpecTransformer(Transformer):
         aux_name = f"_{id_str}_{_MODIFIER_SUFFIX[modifier]}"
         if aux_name not in self._aux_rules:
             if modifier == "?":
-                rule = RuleSpec(aux_name, (Rhs((id_str,)), Rhs(())), inline=True)
+                rule = RuleSpec(aux_name, (Rhs((id_str,)), Rhs(())), inline=InlineType.INLINE)
             elif modifier == "*":
-                rule = RuleSpec(aux_name, (Rhs((aux_name, id_str)), Rhs(())), inline=True)
+                rule = RuleSpec(aux_name, (Rhs((aux_name, id_str)), Rhs(())), inline=InlineType.INLINE)
             else:  # "+"
-                rule = RuleSpec(aux_name, (Rhs((aux_name, id_str)), Rhs((id_str,))), inline=True)
+                rule = RuleSpec(aux_name, (Rhs((aux_name, id_str)), Rhs((id_str,))), inline=InlineType.INLINE)
             self._aux_rules[aux_name] = rule
         return aux_name
 
@@ -113,7 +125,7 @@ class BnfSpecTransformer(Transformer):
         """
         name = f"_group_{self._group_counter}"
         self._group_counter += 1
-        self._aux_rules[name] = RuleSpec(name, tuple(alts), inline=True)
+        self._aux_rules[name] = RuleSpec(name, tuple(alts), inline=InlineType.INLINE)
         return name
     
     def _desugar_inline_terminal(self, terminal_expr: str) -> str:
@@ -121,7 +133,7 @@ class BnfSpecTransformer(Transformer):
         self._inline_terminal_counter += 1
         if terminal_expr.startswith('"'):
             pattern = re.escape(terminal_expr[1:-1])
-        else:            
+        else:
             pattern = terminal_expr[1:-1]
         self._aux_terminals[name] = TerminalSpec(name, pattern=pattern, inline=True)
         return name

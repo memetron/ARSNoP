@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from ...grammar.bnf_types import InlineType
 from ...grammar.grammar import Grammar
 from ...grammar.production import Production
 from ...lexer import Token
@@ -225,7 +226,9 @@ def _to_tree_item(item: Item) -> TreeItem:
             if not curr_item.matched_token.inline:
                 tree_items.append(AST(curr_item.matched_token))
     ordered = splice_children(reversed(tree_items))
-    return make_tree_item(item.production.lhs, item.production.inline, ordered)
+    prod = item.production
+    label = prod.label if prod.label is not None else prod.lhs
+    return make_tree_item(label, prod.inline if prod.label is None else InlineType.NONE, ordered)
 
 
 def _traced_earley_parse(

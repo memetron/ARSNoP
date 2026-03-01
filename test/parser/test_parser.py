@@ -64,6 +64,59 @@ class TestFromFile:
 
 
 # ---------------------------------------------------------------------------
+# Labeled inline alternatives produce named nodes (not spliced)
+# ---------------------------------------------------------------------------
+
+# Grammar: `_ item` is inline, but the `A` alternative carries a label.
+# Parsing "a" should yield start -> found(A), not start -> A (spliced).
+# Parsing "b" should yield start -> B (spliced, no label).
+_LABELED_INLINE_BNF = (
+    ":GRAMMAR\n"
+    "start ::= item ;\n"
+    "_ item ::= A : found | B ;\n"
+    ":TERMINALS\n"
+    "A /a/ ;\n"
+    "B /b/ ;\n"
+)
+
+
+class TestLabeledInline:
+    """A label on an inline-rule alternative un-inlines that alternative."""
+
+    def _spec(self) -> tuple[Grammar, Lexer]:
+        spec = parse_bnf(_LABELED_INLINE_BNF)
+        return Grammar(spec.rules), Lexer(spec.terminals, spec.ignored)
+
+    def test_earley_labeled_alt_creates_named_node(self):
+        grammar, lexer = self._spec()
+        ast = Earley(grammar).parse(lexer.lex("a"))
+        # start should have one child: a named "found" node
+        assert len(ast.children) == 1
+        assert ast.children[0].content == "found"
+
+    def test_earley_unlabeled_alt_still_spliced(self):
+        grammar, lexer = self._spec()
+        ast = Earley(grammar).parse(lexer.lex("b"))
+        # start should have one child: the B token directly (spliced)
+        assert len(ast.children) == 1
+        assert isinstance(ast.children[0].content, Token)
+        assert ast.children[0].content.token == "B"
+
+    def test_slr_labeled_alt_creates_named_node(self):
+        grammar, lexer = self._spec()
+        ast = SLR().generate(grammar).parse(lexer.lex("a"))
+        assert len(ast.children) == 1
+        assert ast.children[0].content == "found"
+
+    def test_slr_unlabeled_alt_still_spliced(self):
+        grammar, lexer = self._spec()
+        ast = SLR().generate(grammar).parse(lexer.lex("b"))
+        assert len(ast.children) == 1
+        assert isinstance(ast.children[0].content, Token)
+        assert ast.children[0].content.token == "B"
+
+
+# ---------------------------------------------------------------------------
 # Inline token tree omission
 # ---------------------------------------------------------------------------
 

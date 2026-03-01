@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from arsnop.grammar.bnf_types import InlineType
+
 from ..ast import AST
 
 type TreeItem = AST | list[AST]
@@ -35,12 +37,12 @@ def splice_children(items: Iterable[TreeItem]) -> list[AST]:
     return children
 
 
-def make_tree_item(lhs: str, inline: bool, children: list[AST]) -> TreeItem:
+def make_tree_item(lhs: str, inline: InlineType, children: list[AST]) -> TreeItem:
     """Return an ``AST`` node for normal rules, or a bare list for inline rules.
 
     The bare list is later spliced into the parent by ``splice_children``,
     leaving no wrapper node for EBNF-generated rules in the final tree.
     """
-    if inline:
+    if inline == InlineType.INLINE or (inline == InlineType.CONDITIONAL_INLINE and len(children) < 2):
         return children
     return AST(lhs, children)

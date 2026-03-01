@@ -32,6 +32,8 @@ _LEXER = Lexer([
     TerminalSpec("OPEN_PAREN",    r"\("),
     TerminalSpec("CLOSE_PAREN",   r"\)"),
     TerminalSpec("INLINE", r"_"),
+    TerminalSpec("CONDITIONAL_INLINE", r"_\?"),
+    TerminalSpec("LABEL_MARKER", r":"),
 ], ignored=["WS"])
 
 _GRAMMAR = Grammar([
@@ -44,17 +46,23 @@ _GRAMMAR = Grammar([
     )),
     RuleSpec("optional_inline", (
         Rhs(("INLINE",)),
+        Rhs(("CONDITIONAL_INLINE",)),
         Rhs(()),
     )),
     RuleSpec("rule", (
         Rhs(("optional_inline", "ID", "ARROW", "alternatives", "SEMI")),
     )),
     RuleSpec("alternatives", (
-        Rhs(("alternatives", "PIPE", "alternative")),
-        Rhs(("alternative",)),
+        Rhs(("alternatives", "PIPE", "alternative", "optional_label")),
+        Rhs(("alternative", "optional_label")),
+    )),
+    RuleSpec("optional_label", (
+        Rhs(("LABEL_MARKER", "ID")),
+        Rhs(()),
     )),
     RuleSpec("alternative", (
         Rhs(("alternative", "atom", "MODIFIER")),
+        Rhs(("alternative", "atom", "CONDITIONAL_INLINE")),
         Rhs(("alternative", "atom")),
         Rhs(()),
     )),

@@ -32,6 +32,8 @@ class BnfSpecTransformer(Transformer):
     def __init__(self) -> None:
         self._aux_rules: dict[str, RuleSpec] = {}
         self._group_counter: int = 0
+        self._inline_terminal_counter: int = 0
+        self._aux_terminals: dict[str, TerminalSpec] = {}
 
     def bnf_file(self, children: list[Any]) -> BnfSpec:
         """Combine rules and terminals sections into a ``BnfSpec``.
@@ -47,7 +49,7 @@ class BnfSpecTransformer(Transformer):
         terminals, ignored = children[3]
         return BnfSpec(
             rules=tuple(rules) + tuple(self._aux_rules.values()),
-            terminals=tuple(terminals),
+            terminals=tuple(terminals) + tuple(self._aux_terminals.values()),
             ignored=tuple(ignored),
         )
 
@@ -113,6 +115,16 @@ class BnfSpecTransformer(Transformer):
         self._group_counter += 1
         self._aux_rules[name] = RuleSpec(name, tuple(alts), inline=True)
         return name
+    
+    def _desugar_inline_terminal(self, terminal_expr: str) -> str:
+        name = f"_INLINE_{self._inline_terminal_counter}"
+        self._inline_terminal_counter += 1
+        if terminal_expr.startswith('"'):
+            pattern = re.escape(terminal_expr[1:-1])
+        else:            
+            pattern = terminal_expr[1:-1]
+        self._aux_terminals[name] = TerminalSpec(name, pattern=pattern, inline=True)
+        return name
 
     def atom(self, children: list[Any]) -> str:
         """Return the symbol name for an atom (plain ID or parenthesised group).
@@ -121,6 +133,8 @@ class BnfSpecTransformer(Transformer):
                   ["(", alts_list, ")"] for a grouped expression.
         """
         if len(children) == 1:
+            if children[0].startswith('"') or children[0].startswith('/'):
+                return self._desugar_inline_terminal(children[0])
             return children[0]
         alts: list[Rhs] = children[1]
         return self._desugar_group(alts)

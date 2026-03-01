@@ -60,6 +60,8 @@ _GRAMMAR = Grammar([
     )),
     RuleSpec("atom", (
         Rhs(("ID",)),
+        Rhs(("QUOTED",)),
+        Rhs(("REGEX",)),
         Rhs(("OPEN_PAREN", "alternatives", "CLOSE_PAREN")),
     )),
     RuleSpec("terminals_section", (

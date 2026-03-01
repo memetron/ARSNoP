@@ -104,3 +104,14 @@ class TestLexerMultiTerminals:
         assert len(tokens) == 3
         assert tokens[1].token == "KEYWORD"
         assert tokens[1].lexeme == "and"
+
+    def test_inline_terminal_sets_token_inline(self):
+        """Tokens produced from an inline TerminalSpec have token.inline=True."""
+        lexer = Lexer(
+            [TerminalSpec("ID", "[a-z]+"), TerminalSpec("SEP", ",", inline=True)],
+            [],
+        )
+        tokens = lexer.lex("a,b")
+        assert tokens[0].inline is False   # ID
+        assert tokens[1].inline is True    # SEP is inline
+        assert tokens[2].inline is False   # ID

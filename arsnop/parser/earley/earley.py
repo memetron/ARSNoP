@@ -222,7 +222,8 @@ def _to_tree_item(item: Item) -> TreeItem:
         if curr_item.completed_by is not None:
             tree_items.append(_to_tree_item(curr_item.completed_by))
         elif curr_item.matched_token is not None:
-            tree_items.append(AST(curr_item.matched_token))
+            if not curr_item.matched_token.inline:
+                tree_items.append(AST(curr_item.matched_token))
     ordered = splice_children(reversed(tree_items))
     return make_tree_item(item.production.lhs, item.production.inline, ordered)
 

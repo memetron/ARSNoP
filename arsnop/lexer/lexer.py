@@ -27,7 +27,8 @@ class Lexer:
             terminals: A sequence of TerminalSpec objects (name + pattern).
             ignored: A sequence of terminal names to filter out during lexing.
         """
-        self.terminals: dict[str, re.Pattern[str]] = {
+        self.terminals: dict[str, TerminalSpec] = {spec.name: spec for spec in terminals}
+        self._compiled: dict[str, re.Pattern[str]] = {
             spec.name: re.compile(f"^{spec.pattern}") for spec in terminals
         }
         self.ignored: list[str] = list(ignored)
@@ -50,7 +51,7 @@ class Lexer:
         while pos < len(text):
             longest = ""
             token = ""
-            for terminal, regex in self.terminals.items():
+            for terminal, regex in self._compiled.items():
                 match = regex.match(text[pos:])
                 if match:
                     if len(match.group()) > len(longest):
@@ -61,7 +62,7 @@ class Lexer:
                     f"Unable to lex file at index {pos} (line {line_number}, column {column_number})"
                 )
             else:
-                sequence.append(Token(token, longest))
+                sequence.append(Token(token, longest, inline=self.terminals[token].inline))
                 pos += len(longest)
                 for char in longest:
                     if char == '\n':

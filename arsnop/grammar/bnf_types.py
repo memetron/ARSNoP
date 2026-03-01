@@ -33,3 +33,4 @@ class TerminalSpec:
 
     name: str
     pattern: str
+    inline: bool = False

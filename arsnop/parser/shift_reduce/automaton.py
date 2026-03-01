@@ -53,7 +53,7 @@ class Automaton(ParsingEngine):
             ))
 
             if action[0] == "shift":
-                tree_stack.append(AST(curr_token))
+                tree_stack.append([] if curr_token.inline else AST(curr_token))
                 stack.append(action[1])
                 index += 1
             elif action[0] == "reduce":

@@ -32,7 +32,7 @@ _LEXER = Lexer([
     TerminalSpec("OPEN_PAREN",    r"\("),
     TerminalSpec("CLOSE_PAREN",   r"\)"),
     TerminalSpec("INLINE", r"_"),
-    TerminalSpec("CONDITIONAL_INLINE", r"_\?"),
+    TerminalSpec("CONDITIONAL_INLINE", r"\?"),
     TerminalSpec("LABEL_MARKER", r":"),
 ], ignored=["WS"])
 

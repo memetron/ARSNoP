@@ -1,17 +1,19 @@
 :GRAMMAR
 start ::= expr ;
-expr ::= expr PLUS term | expr MINUS term | term ;
-term ::= term MULT factor | term DIV factor | factor ;
-factor ::= NUM | OPEN_PAREN expr CLOSE_PAREN ;
+
+?expr ::= expr "+" term : addition
+| expr "-" term : subtraction
+| term ;
+
+?term ::= term "*" factor : multiplication 
+| term "/" factor : division
+| factor ;
+
+?factor ::= NUM 
+| "(" expr ")" ;
 
 :TERMINALS
 NUM /[0-9]+/ ;
-PLUS /\+/ ;
-MINUS /\-/ ;
-DIV /\// ;
-MULT /\*/ ;
-OPEN_PAREN /\(/ ;
-CLOSE_PAREN /\)/ ;
 SPC /[ \t\n\r]+/ ;
 
 .IGNORE SPC ;

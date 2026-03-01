@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from ..lexer import Token
+from .lexer import Token
 
 
 class AST:

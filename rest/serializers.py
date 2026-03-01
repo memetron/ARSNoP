@@ -6,7 +6,7 @@ from typing import Any
 
 from arsnop.grammar import Production
 from arsnop.lexer import Token
-from arsnop.parser.ast import AST
+from arsnop.ast import AST
 from arsnop.parser.earley.trace import EarleyTrace
 from arsnop.parser.shift_reduce.state import Item, State
 from arsnop.parser.shift_reduce.trace import ShiftReduceTrace, TraceAction, TraceStep

@@ -1,9 +1,8 @@
-import re
 import functools
+from collections.abc import Sequence
 
+from .bnf_types import RuleSpec
 from .production import Production
-
-_RULE_REGEX = re.compile(r"^(.+)::=(.+)$")
 
 
 class Grammar:
@@ -15,9 +14,11 @@ class Grammar:
         productions (List[Production]): A list of grammar productions.
         start_symbol (str): The start symbol of the grammar.
     Methods:
-        __init__(text: str, start_symbol: str = "start"):
-            Initializes the grammar by parsing the input grammar text.
+        __init__(rules: Sequence[RuleSpec], start_symbol: str = "start"):
+            Initializes the grammar from structured rule specifications.
 
+        from_text(text: str, start_symbol: str = "start") -> Grammar:
+            Parses grammar rules from a text string and returns a Grammar instance.
         lookup_productions(non_terminal: str) -> List[Production]:
             Retrieves the productions for a given non-terminal symbol.
         is_nullable(non_terminal: str) -> bool:
@@ -36,11 +37,12 @@ class Grammar:
     productions: list[Production]
     start_symbol: str
 
-    def __init__(self, text: str, start_symbol: str = "start") -> None:
+    def __init__(self, rules: Sequence[RuleSpec], start_symbol: str = "start") -> None:
         """
-        Initializes the Grammar object.
+        Initializes the Grammar object from structured rule specifications.
+
         Args:
-            text (str): A string representation of the grammar, where each rule is of the form `A ::= B | C`.
+            rules: A sequence of RuleSpec objects describing the grammar rules.
             start_symbol (str, optional): The start symbol of the grammar. Defaults to "start".
         """
         self.productions = []
@@ -48,18 +50,11 @@ class Grammar:
         self.non_terminals = set()
         self.start_symbol = start_symbol
 
-        for rule in text.strip().split('\n'):
-            match = re.match(_RULE_REGEX, rule)
-            if match:
-                non_terminal, rule_definitions = match.groups()
-                non_terminal = non_terminal.strip()
-                self.non_terminals.add(non_terminal)
-
-                rule_parts = [r.split() for r in rule_definitions.split('|')]
-                for rule_part in rule_parts:
-                    self.productions.append(Production(non_terminal, tuple(rule_part)))
-                    for symbol in rule_part:
-                        self.terminals.add(symbol)
+        for spec in rules:
+            self.non_terminals.add(spec.lhs)
+            for alt in spec.alternatives:
+                self.productions.append(Production(spec.lhs, alt.symbols))
+                self.terminals.update(alt.symbols)
 
         self.terminals -= self.non_terminals
 

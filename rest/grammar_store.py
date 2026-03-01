@@ -3,7 +3,7 @@ import glob
 
 
 _RESOURCES_DIR = os.path.join(
-    os.path.dirname(__file__), "..", "src", "resources"
+    os.path.dirname(__file__), "..", "arsnop", "resources"
 )
 
 

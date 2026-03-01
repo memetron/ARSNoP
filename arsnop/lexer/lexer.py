@@ -1,9 +1,9 @@
 import re
+from collections.abc import Sequence
+
+from arsnop.grammar.bnf_types import TerminalSpec
 
 from .token import Token
-
-_LEXER_FILE_RE = re.compile(r"(.*)\.IGNORE(.*)", re.DOTALL)
-_TERMINAL_RE = re.compile(r"([A-Z_]+) (.+)")
 
 
 class Lexer:
@@ -19,30 +19,18 @@ class Lexer:
             Tokenizes the input text based on the defined terminals and returns a list of tokens.
     """
 
-    def __init__(self, terminals: str) -> None:
+    def __init__(self, terminals: Sequence[TerminalSpec], ignored: Sequence[str]) -> None:
         """
-        Initializes the Lexer with terminal definitions.
-
-        Terminal definitions are specified in a string with sections for exact matches, standard matches,
-        and ignored terminals.
+        Initializes the Lexer with structured terminal definitions.
 
         Args:
-            terminals (str): A string containing terminal definitions in the format:
-                "<STANDARD_TERMINALS>.EXACT<EXACT_TERMINALS>.IGNORE<IGNORED_TERMINALS>"
+            terminals: A sequence of TerminalSpec objects (name + pattern).
+            ignored: A sequence of terminal names to filter out during lexing.
         """
-        self.terminals: dict[str, re.Pattern[str]] = {}
-        match = re.match(_LEXER_FILE_RE, terminals)
-        if not match:
-            raise ValueError("Terminal definitions must contain a .IGNORE section")
-        terminals, ignored = match.groups()
-        self.ignored: list[str] = ignored.split('\n')
-
-        lines = terminals.split('\n')
-        for line in lines:
-            match = re.match(_TERMINAL_RE, line)
-            if match:
-                terminal, regex = match.groups()
-                self.terminals[terminal] = re.compile(f"^{regex}")
+        self.terminals: dict[str, re.Pattern[str]] = {
+            spec.name: re.compile(f"^{spec.pattern}") for spec in terminals
+        }
+        self.ignored: list[str] = list(ignored)
 
     def lex(self, text: str) -> list[Token]:
         """

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from ...grammar import Grammar, Production
+from ...grammar.grammar import Grammar
+from ...grammar.production import Production
 from ...lexer import Token
-from ..ast import AST
+from ...ast import AST
 from .state import Item, State
 from .trace import EarleyColumn, EarleyTrace, TracedEarleyItem
 from ..parsingEngine import ParsingEngine
@@ -12,7 +13,7 @@ class Earley(ParsingEngine):
     """
     Implements the Earley parsing algorithm.
     """
-    def __init__(self, grammar: Grammar, start_symbol: str = 'start'):
+    def __init__(self, grammar: Grammar):
         """
         Initializes the Earley parser.
         Args:
@@ -20,7 +21,7 @@ class Earley(ParsingEngine):
             start_symbol (str): The start symbol of the grammar.
         """
         self._grammar = grammar
-        start_productions = grammar.lookup_productions(start_symbol)
+        start_productions = grammar.lookup_productions(grammar.start_symbol)
         start_items = {Item(production, 0, 0) for production in start_productions}
         self._states = [State(grammar, start_items, 0)]
 
@@ -30,17 +31,10 @@ class Earley(ParsingEngine):
         Args:
             symbol (Token): The input symbol to read.
         """
-        items = list(self._states[-1].successor(symbol.token, matched_by=symbol))
-        for item in items:
-            if item.is_completed():
-                lhs = item.production.lhs
-                input_position = item.input_position
-                completed_items = self._states[input_position].successor(lhs)
-                for completed_item in completed_items:
-                    if completed_item not in items:
-                        completed_item.completed_by = item
-                        items.append(completed_item)
-        self._states.append(State(self._grammar, set(items), len(self._states)))
+        seed = self._states[-1].successor(symbol.token, matched_by=symbol)
+        new_index = len(self._states)
+        column = _build_column(self._grammar, seed, self._states, new_index)
+        self._states.append(State(self._grammar, set(column), new_index))
 
     def _get_recognized_item(self) -> Item | None:
         """
@@ -78,6 +72,79 @@ class Earley(ParsingEngine):
     ) -> EarleyTrace:
         """Run the Earley algorithm and return the full chart with operation labels."""
         return _traced_earley_parse(grammar, tokens, start_symbol)
+
+
+def _build_column(
+    grammar: Grammar,
+    seed: set[Item],
+    prev_states: list[State],
+    index: int,
+) -> list[Item]:
+    """Build one Earley column via a predict+complete fixpoint.
+
+    Handles both nullable completions (origin == index, resolved within this
+    column) and non-nullable completions (origin < index, resolved by looking up
+    the appropriate previous state).  Items are deduplicated by
+    (production, dot, input_position); the first derivation found wins.
+    """
+    seen: set[tuple[Production, int, int]] = set()
+    result: list[Item] = []
+    # Maps lhs → the ε-item that completed it within this column.
+    nullable_completions: dict[str, Item] = {}
+
+    def _add(item: Item) -> bool:
+        key = (item.production, item.dot, item.input_position)
+        if key not in seen:
+            seen.add(key)
+            result.append(item)
+            return True
+        return False
+
+    for item in seed:
+        _add(item)
+
+    i = 0
+    while i < len(result):
+        item = result[i]
+        i += 1
+
+        if item.is_completed():
+            lhs = item.production.lhs
+            origin = item.input_position
+            if origin == index:
+                # Nullable completion within this column.
+                if lhs not in nullable_completions:
+                    nullable_completions[lhs] = item
+                    for other in list(result):
+                        if not other.is_completed() and other.get_next_symbol() == lhs:
+                            new_item = Item(other.production, other.dot + 1, other.input_position)
+                            new_item.prev_step = other
+                            new_item.completed_by = item
+                            _add(new_item)
+            else:
+                # Non-nullable completion: advance items from the origin state.
+                for origin_item in prev_states[origin].items:
+                    if not origin_item.is_completed() and origin_item.get_next_symbol() == lhs:
+                        new_item = Item(origin_item.production, origin_item.dot + 1, origin_item.input_position)
+                        new_item.prev_step = origin_item
+                        new_item.completed_by = item
+                        _add(new_item)
+        else:
+            next_sym = item.get_next_symbol()
+            if next_sym not in grammar.non_terminals:
+                continue
+            # Prediction: add items for each production of next_sym.
+            for prod in grammar.lookup_productions(next_sym):
+                _add(Item(prod, 0, index))
+            # Nullable shortcut: if next_sym was already ε-completed in this
+            # column, immediately advance past it.
+            if next_sym in nullable_completions:
+                new_item = Item(item.production, item.dot + 1, item.input_position)
+                new_item.prev_step = item
+                new_item.completed_by = nullable_completions[next_sym]
+                _add(new_item)
+
+    return result
 
 
 def _to_ast(item: Item) -> AST:

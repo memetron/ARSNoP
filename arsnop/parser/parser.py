@@ -1,35 +1,13 @@
 from __future__ import annotations
 
-import re
 from typing import Any
 
-from ..grammar import Grammar
+from ..grammar.grammar import Grammar
 from ..lexer import Lexer
 from .earley import Earley
 from .parsingEngine import ParsingEngine
 from .shift_reduce import SLR, LALR_Brute_Force, LALR, LR1, LR0
 from ..transformer import Transformer
-
-# Regular expression to extract grammar and terminals from a text file
-_GRAMMAR_FORMAT = re.compile(r":GRAMMAR(.*):TERMINALS(.*)", re.DOTALL)
-
-
-def parse_grammar_text(text: str) -> tuple[str, str]:
-    """Extract the grammar and terminals sections from a grammar definition string.
-
-    Args:
-        text: A string containing :GRAMMAR and :TERMINALS sections.
-
-    Returns:
-        A (grammar_section, terminals_section) tuple of raw strings.
-
-    Raises:
-        ValueError: If the text does not contain the required sections.
-    """
-    match = re.match(_GRAMMAR_FORMAT, text)
-    if not match:
-        raise ValueError("Grammar text must contain :GRAMMAR and :TERMINALS sections")
-    return match.group(1), match.group(2)
 
 
 def from_file(file_path: str, parser: str = "earley", transformer: Transformer | None = None) -> 'Parser':
@@ -66,11 +44,12 @@ def from_file(file_path: str, parser: str = "earley", transformer: Transformer |
         .IGNORE
         A
     """
+    from ..grammar.bnf_parser import parse_bnf
     with open(file_path, 'r') as file:
         text = file.read()
-    grammar_section, terminals_section = parse_grammar_text(text)
-    grammar = Grammar(grammar_section)
-    lexer = Lexer(terminals_section)
+    spec = parse_bnf(text)
+    grammar = Grammar(spec.rules)
+    lexer = Lexer(spec.terminals, spec.ignored)
 
     if parser == "earley":
         generated = Earley(grammar)

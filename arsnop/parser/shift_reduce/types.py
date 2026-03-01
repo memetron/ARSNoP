@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Literal, Final
-from ...grammar import Production
+from ...grammar.production import Production
     
 type GotoTable = dict[tuple[int, str], int]
 type ShiftAction = tuple[Literal["shift"], int]

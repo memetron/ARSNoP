@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ...grammar import Production
+from ...grammar.production import Production
 from ...lexer import Token
-from ..ast import AST
+from ...ast import AST
 
 
 @dataclass(frozen=True)

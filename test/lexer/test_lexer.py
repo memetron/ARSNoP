@@ -1,36 +1,46 @@
 """Tests for src/lexer/lexer.py."""
 import pytest
 
+from arsnop.grammar.bnf_types import TerminalSpec
 from arsnop.lexer import Lexer
 
 
-# Minimal terminal definition: standard terminals + .IGNORE section
-SIMPLE_TERMINALS = "NUM [0-9]+\nID [a-z]+\nSPC [ ]\n.IGNORE\nSPC"
+SIMPLE_TERMINAL_SPECS = [
+    TerminalSpec("NUM", "[0-9]+"),
+    TerminalSpec("ID", "[a-z]+"),
+    TerminalSpec("SPC", "[ ]"),
+]
+SIMPLE_IGNORED = ["SPC"]
 
-MULTI_TERMINALS = "NUM [0-9]+\nOP [+\\-*/]\nSPC [ ]\n.IGNORE\nSPC"
+MULTI_TERMINAL_SPECS = [
+    TerminalSpec("NUM", "[0-9]+"),
+    TerminalSpec("OP", "[+\\-*/]"),
+    TerminalSpec("SPC", "[ ]"),
+]
+MULTI_IGNORED = ["SPC"]
 
 
 class TestLexerInit:
     def test_terminals_parsed(self):
-        lexer = Lexer(SIMPLE_TERMINALS)
+        lexer = Lexer(SIMPLE_TERMINAL_SPECS, SIMPLE_IGNORED)
         assert "NUM" in lexer.terminals
         assert "ID" in lexer.terminals
 
     def test_ignored_parsed(self):
-        lexer = Lexer(SIMPLE_TERMINALS)
+        lexer = Lexer(SIMPLE_TERMINAL_SPECS, SIMPLE_IGNORED)
         assert "SPC" in lexer.ignored
 
 
 class TestLex:
     def test_single_token(self):
-        lexer = Lexer(SIMPLE_TERMINALS)
+        lexer = Lexer(SIMPLE_TERMINAL_SPECS, SIMPLE_IGNORED)
         tokens = lexer.lex("42")
         assert len(tokens) == 1
         assert tokens[0].token == "NUM"
         assert tokens[0].lexeme == "42"
 
     def test_multiple_tokens(self):
-        lexer = Lexer(MULTI_TERMINALS)
+        lexer = Lexer(MULTI_TERMINAL_SPECS, MULTI_IGNORED)
         tokens = lexer.lex("1 + 2")
         assert len(tokens) == 3
         assert tokens[0].token == "NUM"
@@ -41,30 +51,30 @@ class TestLex:
         assert tokens[2].lexeme == "2"
 
     def test_ignored_terminals_filtered(self):
-        lexer = Lexer(SIMPLE_TERMINALS)
+        lexer = Lexer(SIMPLE_TERMINAL_SPECS, SIMPLE_IGNORED)
         tokens = lexer.lex("foo 42 bar")
         token_types = [t.token for t in tokens]
         assert "SPC" not in token_types
         assert len(tokens) == 3
 
     def test_longest_match(self):
-        lexer = Lexer(SIMPLE_TERMINALS)
+        lexer = Lexer(SIMPLE_TERMINAL_SPECS, SIMPLE_IGNORED)
         tokens = lexer.lex("123")
         assert len(tokens) == 1
         assert tokens[0].lexeme == "123"
 
     def test_lex_error(self):
-        lexer = Lexer(SIMPLE_TERMINALS)
+        lexer = Lexer(SIMPLE_TERMINAL_SPECS, SIMPLE_IGNORED)
         with pytest.raises(Exception, match="Unable to lex"):
             lexer.lex("!!!")
 
     def test_empty_input(self):
-        lexer = Lexer(SIMPLE_TERMINALS)
+        lexer = Lexer(SIMPLE_TERMINAL_SPECS, SIMPLE_IGNORED)
         tokens = lexer.lex("")
         assert tokens == []
 
     def test_adjacent_tokens(self):
-        lexer = Lexer(SIMPLE_TERMINALS)
+        lexer = Lexer(SIMPLE_TERMINAL_SPECS, SIMPLE_IGNORED)
         tokens = lexer.lex("abc123")
         assert len(tokens) == 2
         assert tokens[0].token == "ID"
@@ -75,7 +85,7 @@ class TestLex:
 
 class TestLexerMultiTerminals:
     def test_arithmetic_expression(self):
-        lexer = Lexer(MULTI_TERMINALS)
+        lexer = Lexer(MULTI_TERMINAL_SPECS, MULTI_IGNORED)
         tokens = lexer.lex("10 - 3 * 2")
         assert len(tokens) == 5
         assert tokens[0].lexeme == "10"
@@ -86,8 +96,10 @@ class TestLexerMultiTerminals:
 
     def test_literal_regex_terminal(self):
         """Terminals defined with literal strings as regex work correctly."""
-        terminals = "KEYWORD and\nID [a-z]+\nSPC [ ]\n.IGNORE\nSPC"
-        lexer = Lexer(terminals)
+        lexer = Lexer(
+            [TerminalSpec("KEYWORD", "and"), TerminalSpec("ID", "[a-z]+"), TerminalSpec("SPC", "[ ]")],
+            ["SPC"],
+        )
         tokens = lexer.lex("foo and bar")
         assert len(tokens) == 3
         assert tokens[1].token == "KEYWORD"

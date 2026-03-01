@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .util import fixed_point
 from .closure import augmented_start, lr0_closure, lr1_closure, build_states
-from ....grammar import Grammar
+from ....grammar.grammar import Grammar
 from ..generators.generator import Generator
 from ..state import Item, State
 from ..types import (

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .closure import augmented_start, build_states, lr1_closure
-from ....grammar import Grammar
+from ....grammar.grammar import Grammar
 from ..generators.generator import Generator
 from ..state import Item, State
 from ..types import GotoTable

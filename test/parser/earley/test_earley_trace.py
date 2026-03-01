@@ -1,17 +1,29 @@
 """Tests for Earley.trace()."""
 
 from arsnop.grammar import Grammar
+from arsnop.grammar.bnf_parser import parse_bnf
 from arsnop.lexer import Lexer, Token
-from arsnop.parser.ast import AST
+from arsnop.ast import AST
 from arsnop.parser.earley import Earley, EarleyTrace, EarleyColumn, TracedEarleyItem
 
 
-GRAMMAR_TEXT = "start ::= expr\nexpr ::= expr PLUS term | term\nterm ::= NUM"
-TERMINALS_TEXT = "PLUS \\+\nNUM [0-9]+\nSPC [ ]\n.IGNORE\nSPC"
+BNF_TEXT = (
+    ":GRAMMAR\n"
+    "start ::= expr ;\n"
+    "expr ::= expr PLUS term | term ;\n"
+    "term ::= NUM ;\n"
+    ":TERMINALS\n"
+    "PLUS /\\+/ ;\n"
+    "NUM /[0-9]+/ ;\n"
+    "SPC /[ ]/ ;\n"
+    ".IGNORE SPC ;\n"
+)
+
+_SPEC = parse_bnf(BNF_TEXT)
 
 
-def _lex(input_text, terminals_text=TERMINALS_TEXT):
-    return Lexer(terminals_text).lex(input_text)
+def _lex(input_text):
+    return Lexer(_SPEC.terminals, _SPEC.ignored).lex(input_text)
 
 
 def _collect_leaves(node: AST) -> list[str]:
@@ -26,19 +38,19 @@ def _collect_leaves(node: AST) -> list[str]:
 
 class TestTraceReturnType:
     def test_returns_earley_trace(self):
-        grammar = Grammar(GRAMMAR_TEXT)
+        grammar = Grammar(_SPEC.rules)
         tokens = _lex("1 + 2")
         result = Earley.trace(grammar, tokens)
         assert isinstance(result, EarleyTrace)
 
     def test_chart_contains_columns(self):
-        grammar = Grammar(GRAMMAR_TEXT)
+        grammar = Grammar(_SPEC.rules)
         tokens = _lex("1")
         result = Earley.trace(grammar, tokens)
         assert all(isinstance(c, EarleyColumn) for c in result.chart)
 
     def test_items_are_traced(self):
-        grammar = Grammar(GRAMMAR_TEXT)
+        grammar = Grammar(_SPEC.rules)
         tokens = _lex("1")
         result = Earley.trace(grammar, tokens)
         for col in result.chart:
@@ -47,20 +59,20 @@ class TestTraceReturnType:
 
 class TestTraceChart:
     def test_chart_length(self):
-        grammar = Grammar(GRAMMAR_TEXT)
+        grammar = Grammar(_SPEC.rules)
         tokens = _lex("1 + 2")
         result = Earley.trace(grammar, tokens)
         # chart has len(tokens) + 1 columns
         assert len(result.chart) == len(tokens) + 1
 
     def test_first_column_has_no_token(self):
-        grammar = Grammar(GRAMMAR_TEXT)
+        grammar = Grammar(_SPEC.rules)
         tokens = _lex("1")
         result = Earley.trace(grammar, tokens)
         assert result.chart[0].token is None
 
     def test_subsequent_columns_have_tokens(self):
-        grammar = Grammar(GRAMMAR_TEXT)
+        grammar = Grammar(_SPEC.rules)
         tokens = _lex("1 + 2")
         result = Earley.trace(grammar, tokens)
         for i, col in enumerate(result.chart):
@@ -70,7 +82,7 @@ class TestTraceChart:
                 assert col.token is not None
 
     def test_column_indices(self):
-        grammar = Grammar(GRAMMAR_TEXT)
+        grammar = Grammar(_SPEC.rules)
         tokens = _lex("1 + 2")
         result = Earley.trace(grammar, tokens)
         for i, col in enumerate(result.chart):
@@ -79,7 +91,7 @@ class TestTraceChart:
 
 class TestTraceOperations:
     def test_operations_are_valid(self):
-        grammar = Grammar(GRAMMAR_TEXT)
+        grammar = Grammar(_SPEC.rules)
         tokens = _lex("1 + 2")
         result = Earley.trace(grammar, tokens)
         valid_ops = {"init", "predict", "scan", "complete"}
@@ -88,21 +100,21 @@ class TestTraceOperations:
                 assert item.operation in valid_ops
 
     def test_first_column_has_init(self):
-        grammar = Grammar(GRAMMAR_TEXT)
+        grammar = Grammar(_SPEC.rules)
         tokens = _lex("1")
         result = Earley.trace(grammar, tokens)
         ops = {it.operation for it in result.chart[0].items}
         assert "init" in ops
 
     def test_has_predict_items(self):
-        grammar = Grammar(GRAMMAR_TEXT)
+        grammar = Grammar(_SPEC.rules)
         tokens = _lex("1")
         result = Earley.trace(grammar, tokens)
         all_ops = {it.operation for col in result.chart for it in col.items}
         assert "predict" in all_ops
 
     def test_has_scan_items(self):
-        grammar = Grammar(GRAMMAR_TEXT)
+        grammar = Grammar(_SPEC.rules)
         tokens = _lex("1")
         result = Earley.trace(grammar, tokens)
         # Columns after 0 should have scanned items
@@ -115,7 +127,7 @@ class TestTraceOperations:
 
 class TestTraceASTConsistency:
     def test_ast_leaves_match_parse(self):
-        grammar = Grammar(GRAMMAR_TEXT)
+        grammar = Grammar(_SPEC.rules)
         tokens = _lex("1 + 2")
         trace_result = Earley.trace(grammar, tokens)
         earley = Earley(grammar)
@@ -124,14 +136,14 @@ class TestTraceASTConsistency:
         assert _collect_leaves(trace_result.ast) == _collect_leaves(parse_result)
 
     def test_no_error_on_success(self):
-        grammar = Grammar(GRAMMAR_TEXT)
+        grammar = Grammar(_SPEC.rules)
         tokens = _lex("1")
         result = Earley.trace(grammar, tokens)
         assert result.error is None
         assert result.ast is not None
 
     def test_tokens_preserved(self):
-        grammar = Grammar(GRAMMAR_TEXT)
+        grammar = Grammar(_SPEC.rules)
         tokens = _lex("1 + 2")
         result = Earley.trace(grammar, tokens)
         assert len(result.tokens) == len(tokens)
@@ -139,7 +151,7 @@ class TestTraceASTConsistency:
 
 class TestTraceError:
     def test_error_on_unexpected_token(self):
-        grammar = Grammar(GRAMMAR_TEXT)
+        grammar = Grammar(_SPEC.rules)
         tokens = [Token("PLUS", "+")]
         result = Earley.trace(grammar, tokens)
         assert result.ast is None
@@ -147,7 +159,7 @@ class TestTraceError:
         assert "Unexpected token" in result.error
 
     def test_error_has_partial_chart(self):
-        grammar = Grammar(GRAMMAR_TEXT)
+        grammar = Grammar(_SPEC.rules)
         tokens = [Token("NUM", "1"), Token("NUM", "2")]
         result = Earley.trace(grammar, tokens)
         assert result.ast is None

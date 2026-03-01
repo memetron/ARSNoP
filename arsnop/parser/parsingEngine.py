@@ -1,5 +1,5 @@
 from ..lexer import Token
-from .ast import AST
+from ..ast import AST
 
 
 class ParsingEngine:

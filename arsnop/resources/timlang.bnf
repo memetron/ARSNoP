@@ -1,50 +1,49 @@
 :GRAMMAR
-start ::= body
+start ::= body ;
 
-body ::= global_conf OBJECT_LIST obj_list player_info
-global_conf ::= GLOBAL_CONFIG conf_list
-conf_list ::= conf_option conf_list | conf_option
-conf_option ::= ID EQ value
-value ::= BOOL | STRING | INT | FLOAT
+body ::= global_conf OBJECT_LIST obj_list player_info ;
+global_conf ::= GLOBAL_CONFIG conf_list ;
+conf_list ::= conf_option conf_list | conf_option ;
+conf_option ::= ID EQ value ;
+value ::= BOOL | STRING | INT | FLOAT ;
 
-obj_list ::= object obj_list | object
-object ::= ID COLON type properties scale position orientation textureInfo
-type ::= TYPE EQ ID
-properties ::= PROPERTIES EQ LB prop_list RB
-prop_list ::= prop_list STRING | STRING
-scale ::= SCALE EQ FLOAT
-textureInfo ::= TEXTURE_INFO EQ LB int_list RB
+obj_list ::= object obj_list | object ;
+object ::= ID COLON type properties scale position orientation textureInfo ;
+type ::= TYPE EQ ID ;
+properties ::= PROPERTIES EQ LB prop_list RB ;
+prop_list ::= prop_list STRING | STRING ;
+scale ::= SCALE EQ FLOAT ;
+textureInfo ::= TEXTURE_INFO EQ LB int_list RB ;
 
-player_info ::= PLAYER_INFO position orientation
+player_info ::= PLAYER_INFO position orientation ;
 
-position ::= POSITION EQ LB pos RB
-pos ::= FLOAT FLOAT FLOAT
-orientation ::= ORIENTATION EQ LB rot RB
-rot ::= FLOAT FLOAT FLOAT FLOAT
-int_list ::= INT int_list | INT
+position ::= POSITION EQ LB pos RB ;
+pos ::= FLOAT FLOAT FLOAT ;
+orientation ::= ORIENTATION EQ LB rot RB ;
+rot ::= FLOAT FLOAT FLOAT FLOAT ;
+int_list ::= INT int_list | INT ;
 
 :TERMINALS
 
-TYPE type
-PROPERTIES properties
-SCALE scale
-POSITION position
-ORIENTATION orientation
-TEXTURE_INFO textureInfo
-GLOBAL_CONFIG GLOBAL_CONFIG:
-OBJECT_LIST OBJECT_LIST:
-PLAYER_INFO PLAYER_INFO:
+TYPE "type" ;
+PROPERTIES "properties" ;
+SCALE "scale" ;
+POSITION "position" ;
+ORIENTATION "orientation" ;
+TEXTURE_INFO "textureInfo" ;
+GLOBAL_CONFIG "GLOBAL_CONFIG:" ;
+OBJECT_LIST "OBJECT_LIST:" ;
+PLAYER_INFO "PLAYER_INFO:" ;
 
-BOOL TRUE|FALSE
-STRING "[^"]*"
-INT \d+
-FLOAT \d+(\.\d+)?
-ID [a-zA-Z_]\w*
-EQ =
-LB \[
-RB \]
-SPC [ ,\n\t]
-COLON :
+BOOL /TRUE|FALSE/ ;
+STRING /"[^"]*"/ ;
+INT /\d+/ ;
+FLOAT /\d+(\.\d+)?/ ;
+ID /[a-zA-Z_]\w*/ ;
+EQ "=" ;
+LB /\[/ ;
+RB /\]/ ;
+SPC /[ ,\n\t]/ ;
+COLON ":" ;
 
-.IGNORE
-SPC
+.IGNORE SPC ;

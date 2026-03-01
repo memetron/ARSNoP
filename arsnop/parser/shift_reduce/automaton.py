@@ -1,7 +1,7 @@
 import copy
 
 from ...lexer import Token
-from ..ast import AST
+from ...ast import AST
 from ..parsingEngine import ParsingEngine
 from .trace import ShiftReduceTrace, TraceAction, TraceStep
 from .types import GotoTable, ActionTable, Action

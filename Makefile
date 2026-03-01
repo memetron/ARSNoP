@@ -1,4 +1,4 @@
-.PHONY: dev api web install-web test lint typecheck
+.PHONY: dev api web install-web test lint typecheck kill
 
 # Start both the Flask API and Vite dev server
 dev: api web
@@ -26,3 +26,8 @@ lint:
 # Type-check Python sources
 typecheck:
 	uv run pyright src/
+
+# Kill running Flask API and Vite dev server processes
+kill:
+	-pkill -f 'python -m rest.app'
+	-pkill -f 'node.*vite'

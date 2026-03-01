@@ -1,24 +1,46 @@
 """Shared fixtures for shift-reduce generator tests."""
 from arsnop.grammar import Grammar
+from arsnop.grammar.bnf_parser import parse_bnf
 from arsnop.lexer import Lexer, Token
 
 
-SIMPLE_GRAMMAR_TEXT = "start ::= expr\nexpr ::= TOK"
-SIMPLE_TERMINALS_TEXT = "TOK a\nSPC [ ]\n.IGNORE\nSPC"
-
-NESTED_GRAMMAR_TEXT = (
-    "start ::= list\n"
-    "list ::= LP items RP\n"
-    "items ::= ITEM SEP items | ITEM"
+SIMPLE_BNF = (
+    ":GRAMMAR\n"
+    "start ::= expr ;\n"
+    "expr ::= TOK ;\n"
+    ":TERMINALS\n"
+    'TOK "a" ;\n'
+    "SPC /[ ]/ ;\n"
+    ".IGNORE SPC ;\n"
 )
-NESTED_TERMINALS_TEXT = "LP \\(\nRP \\)\nSEP ,\nITEM [a-z]+\nSPC [ ]\n.IGNORE\nSPC"
 
-NULLABLE_GRAMMAR_TEXT = "start ::= A B c\nA ::= a | \nB ::= b | "
+NESTED_BNF = (
+    ":GRAMMAR\n"
+    "start ::= list ;\n"
+    "list ::= LP items RP ;\n"
+    "items ::= ITEM SEP items | ITEM ;\n"
+    ":TERMINALS\n"
+    "LP /\\(/ ;\n"
+    "RP /\\)/ ;\n"
+    'SEP "," ;\n'
+    "ITEM /[a-z]+/ ;\n"
+    "SPC /[ ]/ ;\n"
+    ".IGNORE SPC ;\n"
+)
+
+NULLABLE_BNF = (
+    ":GRAMMAR\n"
+    "start ::= A B c ;\n"
+    "A ::= a | ;\n"
+    "B ::= b | ;\n"
+    ":TERMINALS\n"
+)
 
 
-def parse_with(generator_cls, grammar_text, terminals_text, input_text):
-    grammar = Grammar(grammar_text)
-    lexer = Lexer(terminals_text)
+def parse_with(generator_cls, bnf_text, input_text):
+    spec = parse_bnf(bnf_text)
+    grammar = Grammar(spec.rules)
+    lexer = Lexer(spec.terminals, spec.ignored)
     automaton = generator_cls().generate(grammar)
     tokens = lexer.lex(input_text)
     return automaton.parse(tokens)

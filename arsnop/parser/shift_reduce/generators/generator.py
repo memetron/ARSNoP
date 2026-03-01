@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Callable
 
-from ....grammar import Grammar
+from ....grammar.grammar import Grammar
 from ..automaton import Automaton
 from ..types import Action, ActionEntry, ActionTable, GotoTable
 from ..state import Item, State

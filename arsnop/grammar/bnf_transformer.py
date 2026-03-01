@@ -65,10 +65,15 @@ class BnfSpecTransformer(Transformer):
 
         children: [lhs_str, "::=", alts_list, ";"]
         """
-        lhs: str = children[0]
-        alternatives: list[Rhs] = children[2]
-        return RuleSpec(lhs=lhs, alternatives=tuple(alternatives))
-
+        is_inline: bool = children[0]
+        lhs: str = children[1]
+        alternatives: list[Rhs] = children[3]
+        return RuleSpec(lhs=lhs, alternatives=tuple(alternatives), inline=is_inline)
+    
+    def optional_inline(self, children: list[Any]) -> bool:
+        """Return "_" if the rule is marked inline, or "" otherwise."""
+        return bool(children)
+    
     def alternatives(self, children: list[Any]) -> list[Rhs]:
         """Incrementally build the alternatives list from left-recursive children.
 

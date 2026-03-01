@@ -156,8 +156,9 @@ class TestParseBnfAst:
         rules_section = tree.children[1]
         rule = rules_section.children[1]
         assert rule.content == "rule"
-        # First child of 'rule' is a leaf Token node for the LHS.
-        lhs_node = rule.children[0]
+        # rule ::= optional_inline ID ARROW alternatives SEMI
+        # First child is optional_inline; second child is the ID token.
+        lhs_node = rule.children[1]
         from arsnop.lexer.token import Token as Tok
         assert isinstance(lhs_node.content, Tok)
         assert lhs_node.content.lexeme == "start"
@@ -166,8 +167,8 @@ class TestParseBnfAst:
         tree = parse_bnf_ast(self._SIMPLE)
         rules_section = tree.children[1]
         rule = rules_section.children[1]
-        # rule ::= ID ARROW alternatives SEMI — alternatives is at index 2
-        alts = rule.children[2]
+        # rule ::= optional_inline ID ARROW alternatives SEMI — alternatives is at index 3
+        alts = rule.children[3]
         assert alts.content == "alternatives"
         assert len(alts.children) == 1
         assert alts.children[0].content == "alternative"
@@ -380,3 +381,57 @@ class TestGrouping:
         spec = parse_bnf(text)
         groups = self._group_rules(spec)
         assert len(groups) == 2
+
+
+# ---------------------------------------------------------------------------
+# Inline rules
+# ---------------------------------------------------------------------------
+
+class TestInlineRules:
+    """Rules prefixed with ``_`` are marked ``inline=True`` in the BnfSpec."""
+
+    def _rule(self, spec: BnfSpec, name: str) -> RuleSpec:
+        return next(r for r in spec.rules if r.lhs == name)
+
+    _TEXT = (
+        ":GRAMMAR\n"
+        "start ::= a ;\n"
+        "_ a ::= A ;\n"
+        ":TERMINALS\n"
+        "A /a/ ;\n"
+    )
+
+    def test_inline_flag_set(self):
+        spec = parse_bnf(self._TEXT)
+        assert self._rule(spec, "a").inline is True
+
+    def test_non_inline_flag_not_set(self):
+        spec = parse_bnf(self._TEXT)
+        assert self._rule(spec, "start").inline is False
+
+    def test_lhs_is_rule_name_not_underscore(self):
+        spec = parse_bnf(self._TEXT)
+        lhs_names = [r.lhs for r in spec.rules]
+        assert "a" in lhs_names
+        assert "_" not in lhs_names
+
+    def test_inline_rule_alternatives(self):
+        spec = parse_bnf(self._TEXT)
+        rule = self._rule(spec, "a")
+        assert rule.alternatives == (Rhs(("A",)),)
+
+    def test_inline_rule_multi_alternative(self):
+        text = (
+            ":GRAMMAR\n"
+            "start ::= item ;\n"
+            "_ item ::= A | B ;\n"
+            ":TERMINALS\n"
+            "A /a/ ;\n"
+            "B /b/ ;\n"
+        )
+        spec = parse_bnf(text)
+        rule = self._rule(spec, "item")
+        assert rule.inline is True
+        syms = {alt.symbols for alt in rule.alternatives}
+        assert ("A",) in syms
+        assert ("B",) in syms

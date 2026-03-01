@@ -27,7 +27,8 @@ _LEXER = Lexer([
     TerminalSpec("QUOTED",       r'"(?:[^"\\]|\\.)*"'),
     TerminalSpec("REGEX",        r'/(?:[^/\\]|\\.)*/' ),
     TerminalSpec("WS",           r"[ \t\n\r]+"),
-    TerminalSpec("ID",            r'[a-zA-Z_]\w*'),
+    TerminalSpec("ID",           r'[a-zA-Z_]\w*'),
+    TerminalSpec("MODIFIER",    r"\*|\+|\?"),
 ], ignored=["WS"])
 
 _GRAMMAR = Grammar([
@@ -46,6 +47,7 @@ _GRAMMAR = Grammar([
         Rhs(("alternative",)),
     )),
     RuleSpec("alternative", (
+        Rhs(("alternative", "ID", "MODIFIER")),
         Rhs(("alternative", "ID")),
         Rhs(()),
     )),

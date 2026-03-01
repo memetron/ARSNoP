@@ -1,5 +1,13 @@
 from dataclasses import dataclass
+from enum import StrEnum
 
+
+class Modifier(StrEnum):
+    """EBNF modifiers for rule alternatives."""
+
+    OPT = "opt"
+    STAR = "star"
+    PLUS = "plus"
 
 @dataclass(frozen=True)
 class Production:
@@ -12,6 +20,7 @@ class Production:
 
     lhs: str
     rhs: tuple[str, ...]
+    modifier: Modifier | None = None
 
     def __str__(self) -> str:
         return f"{self.lhs} ::= {' '.join(self.rhs)}"

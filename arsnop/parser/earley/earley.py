@@ -6,6 +6,7 @@ from ...grammar.grammar import Grammar
 from ...grammar.production import Production
 from ...lexer import Token
 from ...ast import AST
+from ..tree import TreeItem, make_tree_item, splice_children
 from .state import Item, State
 from .trace import EarleyColumn, EarleyTrace, TracedEarleyItem
 from ..parsingEngine import ParsingEngine
@@ -47,7 +48,9 @@ class Earley(ParsingEngine):
             Item | None: The recognized item if found, otherwise None.
         """
         for item in self._states[-1].items:
-            if item.is_completed() and item.input_position == 0:
+            if (item.is_completed()
+                    and item.input_position == 0
+                    and item.production.lhs == self._grammar.start_symbol):
                 return item
         return None
 
@@ -196,19 +199,32 @@ def _predict(
 
 
 def _to_ast(item: Item) -> AST:
-    """Convert a completed item to an AST."""
+    """Convert a completed item to an AST, splicing out any modifier-generated nodes."""
+    result = _to_tree_item(item)
+    assert isinstance(result, AST)
+    return result
+
+
+def _to_tree_item(item: Item) -> TreeItem:
+    """Recursively build an AST node or an inline list for modifier rules.
+
+    Non-modifier items return an ``AST`` node as usual.  Modifier items return
+    a bare ``list[AST]`` so their children are spliced directly into the
+    parent's child list, leaving no wrapper node in the final tree.
+    """
     raw_items: list[Item] = []
     curr: Item = item
     while curr.prev_step:
         raw_items.append(curr)
         curr = curr.prev_step
-    children: list[AST] = []
+    tree_items: list[TreeItem] = []
     for curr_item in raw_items:
         if curr_item.completed_by is not None:
-            children.append(_to_ast(curr_item.completed_by))
+            tree_items.append(_to_tree_item(curr_item.completed_by))
         elif curr_item.matched_token is not None:
-            children.append(AST(curr_item.matched_token))
-    return AST(item.production.lhs, list(reversed(children)))
+            tree_items.append(AST(curr_item.matched_token))
+    ordered = splice_children(reversed(tree_items))
+    return make_tree_item(item.production.lhs, item.production.modifier, ordered)
 
 
 def _traced_earley_parse(

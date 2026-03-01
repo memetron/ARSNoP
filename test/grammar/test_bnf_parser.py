@@ -217,3 +217,80 @@ class TestParseBnfAst:
     def test_empty_string_raises(self):
         with pytest.raises((ValueError, Exception)):
             parse_bnf_ast("")
+
+
+# ---------------------------------------------------------------------------
+# EBNF modifier desugaring
+# ---------------------------------------------------------------------------
+
+class TestModifiers:
+    """BnfSpecTransformer desugars ?, *, + into auxiliary BNF rules."""
+
+    def _aux(self, spec: BnfSpec, name: str) -> RuleSpec:
+        return next(r for r in spec.rules if r.lhs == name)
+
+    def test_optional_adds_aux_rule(self):
+        text = ":GRAMMAR\nstart ::= A? ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        assert any(r.lhs == "_A_opt" for r in spec.rules)
+
+    def test_optional_aux_rule_alts(self):
+        text = ":GRAMMAR\nstart ::= A? ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        aux = self._aux(spec, "_A_opt")
+        assert Rhs(("A",)) in aux.alternatives
+        assert Rhs(()) in aux.alternatives
+
+    def test_optional_replaces_symbol(self):
+        text = ":GRAMMAR\nstart ::= A? ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        start = self._aux(spec, "start")
+        assert start.alternatives == (Rhs(("_A_opt",)),)
+
+    def test_star_adds_aux_rule(self):
+        text = ":GRAMMAR\nstart ::= A* ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        assert any(r.lhs == "_A_star" for r in spec.rules)
+
+    def test_star_aux_rule_alts(self):
+        text = ":GRAMMAR\nstart ::= A* ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        aux = self._aux(spec, "_A_star")
+        assert Rhs(("_A_star", "A")) in aux.alternatives
+        assert Rhs(()) in aux.alternatives
+
+    def test_star_replaces_symbol(self):
+        text = ":GRAMMAR\nstart ::= A* ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        start = self._aux(spec, "start")
+        assert start.alternatives == (Rhs(("_A_star",)),)
+
+    def test_plus_adds_aux_rule(self):
+        text = ":GRAMMAR\nstart ::= A+ ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        assert any(r.lhs == "_A_plus" for r in spec.rules)
+
+    def test_plus_aux_rule_alts(self):
+        text = ":GRAMMAR\nstart ::= A+ ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        aux = self._aux(spec, "_A_plus")
+        assert Rhs(("_A_plus", "A")) in aux.alternatives
+        assert Rhs(("A",)) in aux.alternatives
+
+    def test_plus_replaces_symbol(self):
+        text = ":GRAMMAR\nstart ::= A+ ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        start = self._aux(spec, "start")
+        assert start.alternatives == (Rhs(("_A_plus",)),)
+
+    def test_deduplication(self):
+        """A? appearing in two rules generates only one _A_opt rule."""
+        text = ":GRAMMAR\nfoo ::= A? ;\nbar ::= A? ;\n:TERMINALS\nA /a/ ;\n"
+        spec = parse_bnf(text)
+        assert sum(1 for r in spec.rules if r.lhs == "_A_opt") == 1
+
+    def test_multiple_modifiers_in_one_alt(self):
+        text = ":GRAMMAR\nstart ::= A? B* ;\n:TERMINALS\nA /a/ ;\nB /b/ ;\n"
+        spec = parse_bnf(text)
+        start = self._aux(spec, "start")
+        assert start.alternatives == (Rhs(("_A_opt", "_B_star")),)

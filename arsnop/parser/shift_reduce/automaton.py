@@ -3,6 +3,7 @@ import copy
 from ...lexer import Token
 from ...ast import AST
 from ..parsingEngine import ParsingEngine
+from ..tree import TreeItem, make_tree_item, splice_children
 from .trace import ShiftReduceTrace, TraceAction, TraceStep
 from .types import GotoTable, ActionTable, Action
 
@@ -26,7 +27,7 @@ class Automaton(ParsingEngine):
         """Run shift-reduce parsing and record each step as a TraceStep."""
         buffer = stream + [Token("$", "$")]
         stack: list[int] = [0]
-        tree_stack: list[AST] = []
+        tree_stack: list[TreeItem] = []
         index = 0
         steps: list[TraceStep] = []
 
@@ -57,17 +58,20 @@ class Automaton(ParsingEngine):
                 index += 1
             elif action[0] == "reduce":
                 prod = action[1]
-                children: list[AST] = []
+                raw: list[TreeItem] = []
                 for _ in prod.rhs:
                     stack.pop()
-                    children.append(tree_stack.pop())
-                tree_stack.append(AST(prod.lhs, list(reversed(copy.deepcopy(children)))))
+                    raw.append(tree_stack.pop())
+                children = splice_children(reversed(raw))
+                tree_stack.append(make_tree_item(prod.lhs, prod.modifier, copy.deepcopy(children)))
                 stack.append(self._goto[(stack[-1], prod.lhs)])
             elif action[0] == "accept":
+                top = tree_stack[0] if tree_stack else None
+                ast = top if isinstance(top, AST) else None
                 return ShiftReduceTrace(
                     tokens=tuple(stream),
                     steps=tuple(steps),
-                    ast=tree_stack[0] if tree_stack else None,
+                    ast=ast,
                 )
 
         return ShiftReduceTrace(

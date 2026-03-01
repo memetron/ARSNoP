@@ -10,7 +10,7 @@ import re
 from typing import Any
 
 from ..transformer import Transformer
-from .bnf_types import Alternative, BnfSpec, RuleSpec, TerminalSpec
+from .bnf_types import Rhs, BnfSpec, RuleSpec, TerminalSpec
 
 
 class BnfSpecTransformer(Transformer):
@@ -51,10 +51,10 @@ class BnfSpecTransformer(Transformer):
         children: [lhs_str, "::=", alts_list, ";"]
         """
         lhs: str = children[0]
-        alternatives: list[Alternative] = children[2]
+        alternatives: list[Rhs] = children[2]
         return RuleSpec(lhs=lhs, alternatives=tuple(alternatives))
 
-    def alternatives(self, children: list[Any]) -> list[Alternative]:
+    def alternatives(self, children: list[Any]) -> list[Rhs]:
         """Incrementally build the alternatives list from left-recursive children.
 
         children: [alt] for base case, or [alts_list, "|", alt] for recursive.
@@ -63,16 +63,16 @@ class BnfSpecTransformer(Transformer):
             return [children[0]]
         return children[0] + [children[2]]
 
-    def alternative(self, children: list[Any]) -> Alternative:
+    def alternative(self, children: list[Any]) -> Rhs:
         """Build an ``Alternative`` incrementally from left-recursive children.
 
-        children: [] for empty base case, or [prev_alt, word_str] for recursive.
+        children: [] for empty base case, or [prev_alt, id_str] for recursive.
         """
         if not children:
-            return Alternative(symbols=())
-        prev: Alternative = children[0]
-        word: str = children[1]
-        return Alternative(symbols=prev.symbols + (word,))
+            return Rhs(symbols=())
+        prev: Rhs = children[0]
+        id_str: str = children[1]
+        return Rhs(symbols=prev.symbols + (id_str,))
 
     def terminals_section(
         self, children: list[Any]
@@ -118,7 +118,7 @@ class BnfSpecTransformer(Transformer):
     def ignore_names(self, children: list[Any]) -> list[str]:
         """Incrementally build the ignored-names list from left-recursive children.
 
-        children: [word_str] for base case, or [prev_list, word_str] for recursive.
+        children: [id_str] for base case, or [prev_list, id_str] for recursive.
         """
         if len(children) == 1:
             return [children[0]]

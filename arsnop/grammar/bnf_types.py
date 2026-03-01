@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 @dataclass(frozen=True)
-class Alternative:
+class Rhs:
     """One alternative in a rule (empty symbols tuple → nullable production)."""
 
     symbols: tuple[str, ...]
@@ -15,7 +15,7 @@ class RuleSpec:
     """A single grammar rule: lhs ::= alt1 | alt2 | ..."""
 
     lhs: str
-    alternatives: tuple[Alternative, ...]
+    alternatives: tuple[Rhs, ...]
 
 
 @dataclass(frozen=True)

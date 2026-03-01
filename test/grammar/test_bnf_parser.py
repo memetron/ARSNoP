@@ -3,7 +3,7 @@
 import pytest
 
 from arsnop.grammar import (
-    Alternative,
+    Rhs,
     BnfSpec,
     BnfSpecTransformer,
     RuleSpec,
@@ -32,7 +32,7 @@ class TestParseBnf:
         rule = spec.rules[0]
         assert isinstance(rule, RuleSpec)
         assert rule.lhs == "start"
-        assert rule.alternatives == (Alternative(("A",)),)
+        assert rule.alternatives == (Rhs(("A",)),)
 
     def test_terminal_structure(self):
         text = ":GRAMMAR\nstart ::= A ;\n:TERMINALS\nA /a/ ;\n"
@@ -166,7 +166,7 @@ class TestParseBnfAst:
         tree = parse_bnf_ast(self._SIMPLE)
         rules_section = tree.children[1]
         rule = rules_section.children[1]
-        # rule ::= WORD ARROW alternatives SEMI — alternatives is at index 2
+        # rule ::= ID ARROW alternatives SEMI — alternatives is at index 2
         alts = rule.children[2]
         assert alts.content == "alternatives"
         assert len(alts.children) == 1
@@ -178,7 +178,7 @@ class TestParseBnfAst:
         terminals_section = tree.children[3]
         term_def = terminals_section.children[1]
         assert term_def.content == "terminal_def"
-        # terminal_def ::= WORD REGEX SEMI — three children
+        # terminal_def ::= ID REGEX SEMI — three children
         assert len(term_def.children) == 3
         # children[1] is the REGEX or QUOTED pattern token
         from arsnop.lexer.token import Token as Tok

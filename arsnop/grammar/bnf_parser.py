@@ -15,7 +15,7 @@ from ..ast import AST
 from ..parser.earley.earley import Earley
 from .grammar import Grammar
 from .bnf_transformer import BnfSpecTransformer
-from .bnf_types import Alternative, BnfSpec, RuleSpec, TerminalSpec
+from .bnf_types import Rhs, BnfSpec, RuleSpec, TerminalSpec
 
 _LEXER = Lexer([
     TerminalSpec("GRAMMAR_KW",   r":GRAMMAR"),
@@ -27,43 +27,43 @@ _LEXER = Lexer([
     TerminalSpec("QUOTED",       r'"(?:[^"\\]|\\.)*"'),
     TerminalSpec("REGEX",        r'/(?:[^/\\]|\\.)*/' ),
     TerminalSpec("WS",           r"[ \t\n\r]+"),
-    TerminalSpec("WORD",         r'[a-zA-Z_]\w*'),
+    TerminalSpec("ID",            r'[a-zA-Z_]\w*'),
 ], ignored=["WS"])
 
 _GRAMMAR = Grammar([
     RuleSpec("bnf_file", (
-        Alternative(("GRAMMAR_KW", "rules_section", "TERMINALS_KW", "terminals_section")),
+        Rhs(("GRAMMAR_KW", "rules_section", "TERMINALS_KW", "terminals_section")),
     )),
     RuleSpec("rules_section", (
-        Alternative(("rules_section", "rule")),
-        Alternative(()),
+        Rhs(("rules_section", "rule")),
+        Rhs(()),
     )),
     RuleSpec("rule", (
-        Alternative(("WORD", "ARROW", "alternatives", "SEMI")),
+        Rhs(("ID", "ARROW", "alternatives", "SEMI")),
     )),
     RuleSpec("alternatives", (
-        Alternative(("alternatives", "PIPE", "alternative")),
-        Alternative(("alternative",)),
+        Rhs(("alternatives", "PIPE", "alternative")),
+        Rhs(("alternative",)),
     )),
     RuleSpec("alternative", (
-        Alternative(("alternative", "WORD")),
-        Alternative(()),
+        Rhs(("alternative", "ID")),
+        Rhs(()),
     )),
     RuleSpec("terminals_section", (
-        Alternative(("terminals_section", "terminal_def")),
-        Alternative(("terminals_section", "ignore_section")),
-        Alternative(()),
+        Rhs(("terminals_section", "terminal_def")),
+        Rhs(("terminals_section", "ignore_section")),
+        Rhs(()),
     )),
     RuleSpec("terminal_def", (
-        Alternative(("WORD", "REGEX", "SEMI")),
-        Alternative(("WORD", "QUOTED", "SEMI")),
+        Rhs(("ID", "REGEX", "SEMI")),
+        Rhs(("ID", "QUOTED", "SEMI")),
     )),
     RuleSpec("ignore_section", (
-        Alternative(("IGNORE_KW", "ignore_names", "SEMI")),
+        Rhs(("IGNORE_KW", "ignore_names", "SEMI")),
     )),
     RuleSpec("ignore_names", (
-        Alternative(("ignore_names", "WORD")),
-        Alternative(("WORD",)),
+        Rhs(("ignore_names", "ID")),
+        Rhs(("ID",)),
     )),
 ], start_symbol="bnf_file")
 

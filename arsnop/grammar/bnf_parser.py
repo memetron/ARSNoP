@@ -62,7 +62,6 @@ _GRAMMAR = Grammar([
     )),
     RuleSpec("alternative", (
         Rhs(("alternative", "atom", "MODIFIER")),
-        Rhs(("alternative", "atom", "CONDITIONAL_INLINE")),
         Rhs(("alternative", "atom")),
         Rhs(()),
     )),

@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import re
 from collections.abc import Sequence
-from typing import NoReturn
+from typing import TYPE_CHECKING, NoReturn
 
-from arsnop.grammar.bnf_types import TerminalSpec
+if TYPE_CHECKING:
+    from arsnop.grammar.bnf_types import TerminalSpec
 
 from .token import Token
 

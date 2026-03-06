@@ -1,4 +1,3 @@
-import { SimpleTreeView, TreeItem } from "@mui/x-tree-view";
 import { Typography } from "@mui/material";
 import { useAppStore } from "../store/useAppStore";
 import type { ASTNodeOrToken } from "../api/types";
@@ -6,29 +5,18 @@ import type { ASTNodeOrToken } from "../api/types";
 function renderNode(node: ASTNodeOrToken, id: string): React.ReactNode {
   if (node.type === "token") {
     return (
-      <TreeItem
-        key={id}
-        itemId={id}
-        label={
-          <span style={{ fontFamily: "monospace" }}>
-            <strong>{node.token}</strong>: "{node.lexeme}"
-          </span>
-        }
-      />
+      <div key={id} style={{ paddingLeft: 16, fontFamily: "monospace", lineHeight: "1.8em" }}>
+        <strong>{node.token}</strong>: "{node.lexeme}"
+      </div>
     );
   }
   return (
-    <TreeItem
-      key={id}
-      itemId={id}
-      label={
-        <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>
-          {node.symbol}
-        </span>
-      }
-    >
+    <details key={id} open={id === "root"} style={{ paddingLeft: 16 }}>
+      <summary style={{ fontFamily: "monospace", fontWeight: "bold", cursor: "pointer", lineHeight: "1.8em" }}>
+        {node.symbol}
+      </summary>
       {node.children.map((child, i) => renderNode(child, `${id}-${i}`))}
-    </TreeItem>
+    </details>
   );
 }
 
@@ -42,16 +30,10 @@ export default function ASTView() {
   if (!ast) {
     return (
       <Typography color="text.secondary">
-        {error
-          ? `Parse error: ${error}`
-          : 'Click "Parse" to see the AST.'}
+        {error ? `Parse error: ${error}` : 'Click "Parse" to see the AST.'}
       </Typography>
     );
   }
 
-  return (
-    <SimpleTreeView defaultExpandedItems={["root"]}>
-      {renderNode(ast, "root")}
-    </SimpleTreeView>
-  );
+  return <div style={{ paddingLeft: 4 }}>{renderNode(ast, "root")}</div>;
 }

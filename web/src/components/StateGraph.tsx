@@ -12,7 +12,6 @@ import CloseIcon from "@mui/icons-material/Close";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import ZoomOutIcon from "@mui/icons-material/ZoomOut";
 import FitScreenIcon from "@mui/icons-material/FitScreen";
-import dagre from "@dagrejs/dagre";
 import { useAppStore } from "../store/useAppStore";
 import { formatItem } from "../utils/formatItem";
 import type { State, Item } from "../api/types";
@@ -86,6 +85,69 @@ function fitViewTransform(
   return { x, y, scale };
 }
 
+const RANK_SEP = 140;
+const NODE_SEP = 20;
+
+/** BFS from state 0 to assign each node a rank (column index). */
+function assignRanks(nodeIds: string[], edges: GraphEdge[]): Map<string, number> {
+  const adj = new Map<string, string[]>(nodeIds.map((id) => [id, []]));
+  for (const edge of edges) {
+    if (!edge.isSelfLoop) adj.get(edge.sourceId)?.push(edge.targetId);
+  }
+
+  const rank = new Map<string, number>(nodeIds.map((id) => [id, -1]));
+  rank.set("0", 0);
+  const queue = ["0"];
+  while (queue.length > 0) {
+    const curr = queue.shift()!;
+    for (const next of adj.get(curr) ?? []) {
+      if (rank.get(next) === -1) {
+        rank.set(next, rank.get(curr)! + 1);
+        queue.push(next);
+      }
+    }
+  }
+  // Unreachable nodes fall back to rank 0
+  for (const id of nodeIds) {
+    if (rank.get(id) === -1) rank.set(id, 0);
+  }
+  return rank;
+}
+
+/** Compute (cx, cy) center positions for each node using a rank-based layout. */
+function computePositions(
+  nodeIds: string[],
+  edges: GraphEdge[],
+  nodeHeights: Map<string, number>,
+): Map<string, { cx: number; cy: number }> {
+  const rank = assignRanks(nodeIds, edges);
+
+  const rankGroups = new Map<number, string[]>();
+  for (const id of nodeIds) {
+    const r = rank.get(id)!;
+    if (!rankGroups.has(r)) rankGroups.set(r, []);
+    rankGroups.get(r)!.push(id);
+  }
+  for (const group of rankGroups.values()) {
+    group.sort((a, b) => +a - +b);
+  }
+
+  const positions = new Map<string, { cx: number; cy: number }>();
+  for (const [r, group] of rankGroups) {
+    const cx = r * (NODE_WIDTH + RANK_SEP) + NODE_WIDTH / 2;
+    const totalH =
+      group.reduce((sum, id) => sum + (nodeHeights.get(id) ?? 60), 0) +
+      NODE_SEP * (group.length - 1);
+    let y = -totalH / 2;
+    for (const id of group) {
+      const h = nodeHeights.get(id) ?? 60;
+      positions.set(id, { cx, cy: y + h / 2 });
+      y += h + NODE_SEP;
+    }
+  }
+  return positions;
+}
+
 function buildLayout(tablesResult: NonNullable<ReturnType<typeof useAppStore>["tablesResult"]>) {
   const { states, actionTable, gotoTable } = tablesResult;
 
@@ -125,26 +187,18 @@ function buildLayout(tablesResult: NonNullable<ReturnType<typeof useAppStore>["t
     }
   }
 
-  const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: "LR", nodesep: 50, ranksep: 100 });
-  g.setDefaultEdgeLabel(() => ({}));
-
-  for (const state of states) {
-    g.setNode(String(state.index), { width: NODE_WIDTH, height: estimateNodeHeight(state.items.length) });
-  }
-  for (const edge of edgeMap.values()) {
-    g.setEdge(edge.sourceId, edge.targetId);
-  }
-
-  dagre.layout(g);
+  const nodeIds = states.map((s) => String(s.index));
+  const nodeHeights = new Map(states.map((s) => [String(s.index), estimateNodeHeight(s.items.length)]));
+  const graphEdges = Array.from(edgeMap.values());
+  const positions = computePositions(nodeIds, graphEdges, nodeHeights);
 
   const graphNodes: GraphNode[] = states.flatMap((state) => {
-    const pos = g.node(String(state.index));
+    const pos = positions.get(String(state.index));
     if (!pos) return [];
-    return [{ id: String(state.index), cx: pos.x, cy: pos.y, width: NODE_WIDTH, height: pos.height, state }];
+    return [{ id: String(state.index), cx: pos.cx, cy: pos.cy, width: NODE_WIDTH, height: nodeHeights.get(String(state.index))!, state }];
   });
 
-  return { graphNodes, graphEdges: Array.from(edgeMap.values()) };
+  return { graphNodes, graphEdges };
 }
 
 export default function StateGraph() {
@@ -158,6 +212,11 @@ export default function StateGraph() {
   const transformSnapshot = useRef<ViewTransform>({ x: 0, y: 0, scale: 1 });
   const transformRef = useRef(transform);
   transformRef.current = transform;
+  const [nodePositions, setNodePositions] = useState<Map<string, { cx: number; cy: number }>>(new Map());
+  const nodePositionsRef = useRef(nodePositions);
+  nodePositionsRef.current = nodePositions;
+  const draggingNodeId = useRef<string | null>(null);
+  const nodeDragStart = useRef({ mouseX: 0, mouseY: 0, cx: 0, cy: 0 });
 
   const { graphNodes, graphEdges } = useMemo(
     () => (tablesResult ? buildLayout(tablesResult) : { graphNodes: [], graphEdges: [] }),
@@ -166,11 +225,21 @@ export default function StateGraph() {
 
   const nodeMap = useMemo(() => new Map(graphNodes.map((n) => [n.id, n])), [graphNodes]);
 
+  // Reset positions when the layout changes (new parse result)
+  useEffect(() => {
+    setNodePositions(new Map(graphNodes.map((n) => [n.id, { cx: n.cx, cy: n.cy }])));
+  }, [graphNodes]);
+
   const doFitView = useCallback(() => {
     if (!svgRef.current || graphNodes.length === 0) return;
     const { width, height } = svgRef.current.getBoundingClientRect();
     if (width === 0 || height === 0) return;
-    setTransform(fitViewTransform(graphNodes, width, height));
+    const currentNodes = graphNodes.map((n) => ({
+      ...n,
+      cx: nodePositionsRef.current.get(n.id)?.cx ?? n.cx,
+      cy: nodePositionsRef.current.get(n.id)?.cy ?? n.cy,
+    }));
+    setTransform(fitViewTransform(currentNodes, width, height));
   }, [graphNodes]);
 
   useEffect(() => {
@@ -208,7 +277,30 @@ export default function StateGraph() {
     if (svgRef.current) svgRef.current.style.cursor = "grabbing";
   }, []);
 
+  const handleNodeMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation();
+    const pos = nodePositionsRef.current.get(nodeId);
+    if (!pos) return;
+    draggingNodeId.current = nodeId;
+    hasDragged.current = false;
+    nodeDragStart.current = { mouseX: e.clientX, mouseY: e.clientY, cx: pos.cx, cy: pos.cy };
+    if (svgRef.current) svgRef.current.style.cursor = "grabbing";
+  }, []);
+
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    if (draggingNodeId.current !== null) {
+      const dx = e.clientX - nodeDragStart.current.mouseX;
+      const dy = e.clientY - nodeDragStart.current.mouseY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) hasDragged.current = true;
+      const scale = transformRef.current.scale;
+      const id = draggingNodeId.current;
+      setNodePositions((prev) => {
+        const next = new Map(prev);
+        next.set(id, { cx: nodeDragStart.current.cx + dx / scale, cy: nodeDragStart.current.cy + dy / scale });
+        return next;
+      });
+      return;
+    }
     if (!isPanning.current) return;
     const dx = e.clientX - panOrigin.current.x;
     const dy = e.clientY - panOrigin.current.y;
@@ -216,8 +308,9 @@ export default function StateGraph() {
     setTransform({ ...transformSnapshot.current, x: transformSnapshot.current.x + dx, y: transformSnapshot.current.y + dy });
   }, []);
 
-  const stopPanning = useCallback(() => {
+  const stopDragging = useCallback(() => {
     isPanning.current = false;
+    draggingNodeId.current = null;
     if (svgRef.current) svgRef.current.style.cursor = "grab";
   }, []);
 
@@ -242,8 +335,8 @@ export default function StateGraph() {
           style={{ width: "100%", height: "100%", cursor: "grab", display: "block" }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
-          onMouseUp={stopPanning}
-          onMouseLeave={stopPanning}
+          onMouseUp={stopDragging}
+          onMouseLeave={stopDragging}
         >
           <defs>
             <marker id="arrow-shift" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
@@ -255,9 +348,11 @@ export default function StateGraph() {
           </defs>
           <g transform={`translate(${transform.x},${transform.y}) scale(${transform.scale})`}>
             {graphEdges.map((edge) => {
-              const src = nodeMap.get(edge.sourceId);
-              const tgt = nodeMap.get(edge.targetId);
-              if (!src || !tgt) return null;
+              const srcMeta = nodeMap.get(edge.sourceId);
+              const tgtMeta = nodeMap.get(edge.targetId);
+              if (!srcMeta || !tgtMeta) return null;
+              const srcPos = nodePositions.get(edge.sourceId) ?? { cx: srcMeta.cx, cy: srcMeta.cy };
+              const tgtPos = nodePositions.get(edge.targetId) ?? { cx: tgtMeta.cx, cy: tgtMeta.cy };
               const color = edge.edgeType === "shift" ? "#1565c0" : "#7b1fa2";
               const markerId = `url(#arrow-${edge.edgeType})`;
 
@@ -266,17 +361,17 @@ export default function StateGraph() {
               let labelY: number;
 
               if (edge.isSelfLoop) {
-                const topY = src.cy - src.height / 2;
+                const topY = srcPos.cy - srcMeta.height / 2;
                 const spread = 20;
                 const lift = 60;
-                pathD = `M ${src.cx - spread},${topY} C ${src.cx - spread},${topY - lift} ${src.cx + spread},${topY - lift} ${src.cx + spread},${topY}`;
-                labelX = src.cx;
+                pathD = `M ${srcPos.cx - spread},${topY} C ${srcPos.cx - spread},${topY - lift} ${srcPos.cx + spread},${topY - lift} ${srcPos.cx + spread},${topY}`;
+                labelX = srcPos.cx;
                 labelY = topY - lift - 8;
               } else {
-                const sx = src.cx + src.width / 2;
-                const sy = src.cy;
-                const tx = tgt.cx - tgt.width / 2;
-                const ty = tgt.cy;
+                const sx = srcPos.cx + srcMeta.width / 2;
+                const sy = srcPos.cy;
+                const tx = tgtPos.cx - tgtMeta.width / 2;
+                const ty = tgtPos.cy;
                 const cpx1 = sx + (tx - sx) * 0.4;
                 const cpx2 = tx - (tx - sx) * 0.4;
                 pathD = `M ${sx},${sy} C ${cpx1},${sy} ${cpx2},${ty} ${tx},${ty}`;
@@ -296,8 +391,9 @@ export default function StateGraph() {
               );
             })}
             {graphNodes.map((node) => {
-              const x = node.cx - node.width / 2;
-              const y = node.cy - node.height / 2;
+              const pos = nodePositions.get(node.id) ?? { cx: node.cx, cy: node.cy };
+              const x = pos.cx - node.width / 2;
+              const y = pos.cy - node.height / 2;
               const visibleItems = node.state.items.slice(0, MAX_VISIBLE_ITEMS);
               const remaining = node.state.items.length - MAX_VISIBLE_ITEMS;
               return (
@@ -307,8 +403,8 @@ export default function StateGraph() {
                   y={y}
                   width={node.width}
                   height={node.height}
-                  style={{ cursor: "pointer", overflow: "visible" }}
-                  onMouseDown={(e) => e.stopPropagation()}
+                  style={{ cursor: "grab", overflow: "visible" }}
+                  onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
                   onClick={() => handleNodeClick(node.state)}
                 >
                   <Box
